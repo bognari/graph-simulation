@@ -15,7 +15,7 @@ buildscript {
     }
 
     dependencies {
-        classpath group: "org.jetbrains.kotlin", name: "kotlin-gradle-plugin", version: kotlin_version
+        classpath group: 'org.jetbrains.kotlin', name: 'kotlin-gradle-plugin', version: kotlin_version
     }
 }
 
@@ -28,12 +28,12 @@ repositories {
 }
 
 dependencies {
-    compile group: "org.jetbrains.kotlin", name: "kotlin-stdlib-jdk8", version: kotlin_version
-    compile group: "org.neo4j", name: "neo4j", version: neo4j_version
-    testCompile group: "junit", name: "junit", version: junit_version
-    testCompile group: "org.neo4j.test", name: "neo4j-harness", version: neo4j_version
-    testCompile group: "org.neo4j.driver", name: "neo4j-java-driver", version: neo4jDriver_version
-    antlr group: "org.antlr", name: "antlr4", version: antlr_version
+    compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: kotlin_version
+    compile group: 'org.neo4j', name: 'neo4j', version: neo4j_version
+    testCompile group: 'junit', name: 'junit', version: junit_version
+    testCompile group: 'org.neo4j.test', name: 'neo4j-harness', version: neo4j_version
+    testCompile group: 'org.neo4j.driver', name: 'neo4j-java-driver', version: neo4jDriver_version
+    antlr group: 'org.antlr', name: 'antlr4', version: antlr_version
     // https://mvnrepository.com/artifact/org.antlr/antlr4
     compile group: 'org.antlr', name: 'antlr4', version: antlr_version
     // https://mvnrepository.com/artifact/org.antlr/antlr4-runtime
@@ -42,19 +42,19 @@ dependencies {
 
 
 generateGrammarSource {
-    maxHeapSize = "64m"
-    arguments += ["-visitor", "-long-messages", "-no-listener"]
+    maxHeapSize = '64m'
+    arguments += ['-visitor', '-long-messages', '-no-listener']
 }
 
 compileKotlin {
     dependsOn generateGrammarSource
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = '1.8'
 }
 compileTestKotlin {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = '1.8'
 }
 
 
 tasks.withType(JavaCompile) {
-    options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    options.compilerArgs << '-Xlint:unchecked' << '-Xlint:deprecation'
 }
