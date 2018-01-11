@@ -141,7 +141,7 @@ class MyNode(private val variable: String = "") : MyEntity(), Node {
         return labels.joinToString(", ")
     }
 
-    private fun variableString() : String {
+    private fun variableString(): String {
         if (variable.isEmpty()) {
             return ""
         }

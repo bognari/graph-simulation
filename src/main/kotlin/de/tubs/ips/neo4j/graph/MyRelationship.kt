@@ -7,7 +7,7 @@ class MyRelationship(private val prototype: MyRelationshipPrototype, private val
     init {
         prototype.relationships.add(this)
 
-        when(direction) {
+        when (direction) {
             Direction.OUTGOING -> {
                 start.insertOutgoingRelationship(this)
                 end.insertIncomingRelationship(this)
@@ -23,14 +23,14 @@ class MyRelationship(private val prototype: MyRelationshipPrototype, private val
         }
     }
 
-    fun isOrRelationship() : Boolean {
+    fun isOrRelationship(): Boolean {
         return direction == null
     }
 
-    fun getOtherRelationships() : List<MyRelationship> {
+    fun getOtherRelationships(): List<MyRelationship> {
         return prototype.relationships
     }
-    
+
     override fun delete() {
         throw UnsupportedOperationException()
     }
@@ -72,7 +72,7 @@ class MyRelationship(private val prototype: MyRelationshipPrototype, private val
         }
     }
 
-    private fun variableString() : String {
+    private fun variableString(): String {
         if (prototype.variable.isEmpty()) {
             return ""
         }

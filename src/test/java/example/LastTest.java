@@ -11,30 +11,27 @@ import org.neo4j.harness.junit.Neo4jRule;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 
-public class LastTest
-{
+public class LastTest {
     // This rule starts a Neo4j instance
     @Rule
     public Neo4jRule neo4j = new Neo4jRule()
 
             // This is the function we want to test
-            .withAggregationFunction( Last.class );
+            .withAggregationFunction(Last.class);
 
     @Test
-    public void shouldAllowReturningTheLastValue() throws Throwable
-    {
+    public void shouldAllowReturningTheLastValue() throws Throwable {
         // This is in a try-block, to make sure we close the driver after the test
-        try( Driver driver = GraphDatabase
-                .driver( neo4j.boltURI() , Config.build().withEncryptionLevel( Config.EncryptionLevel.NONE ).toConfig() ) )
-        {
+        try (Driver driver = GraphDatabase
+                .driver(neo4j.boltURI(), Config.build().withoutEncryption().toConfig())) {
             // Given
             Session session = driver.session();
 
             // When
-            Long result = session.run( "UNWIND range(1,10) as value RETURN example.last(value) AS last").single().get("last").asLong();
+            Long result = session.run("UNWIND range(1,10) as value RETURN example.last(value) AS last").single().get("last").asLong();
 
             // Then
-            assertThat( result, equalTo( 10L ) );
+            assertThat(result, equalTo(10L));
         }
     }
 }

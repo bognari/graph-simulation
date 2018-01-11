@@ -11,30 +11,27 @@ import org.neo4j.harness.junit.Neo4jRule;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 
-public class JoinTest
-{
+public class JoinTest {
     // This rule starts a Neo4j instance
     @Rule
     public Neo4jRule neo4j = new Neo4jRule()
 
             // This is the function we want to test
-            .withFunction( Join.class );
+            .withFunction(Join.class);
 
     @Test
-    public void shouldAllowIndexingAndFindingANode() throws Throwable
-    {
+    public void shouldAllowIndexingAndFindingANode() throws Throwable {
         // This is in a try-block, to make sure we close the driver after the test
-        try( Driver driver = GraphDatabase
-                .driver( neo4j.boltURI() , Config.build().withEncryptionLevel( Config.EncryptionLevel.NONE ).toConfig() ) )
-        {
+        try (Driver driver = GraphDatabase
+                .driver(neo4j.boltURI(), Config.build().withoutEncryption().toConfig())) {
             // Given
             Session session = driver.session();
 
             // When
-            String result = session.run( "RETURN example.join(['Hello', 'World']) AS result").single().get("result").asString();
+            String result = session.run("RETURN example.join(['Hello', 'World']) AS result").single().get("result").asString();
 
             // Then
-            assertThat( result, equalTo( "Hello,World" ) );
+            assertThat(result, equalTo("Hello,World"));
         }
     }
 }
