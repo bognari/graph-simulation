@@ -4,7 +4,7 @@ import org.neo4j.graphdb.*
 
 class MyNode(private val variable: String = "") : MyEntity(), Node {
 
-    private val labels = ArrayList<Label>()
+    private val labels = HashSet<Label>() // FIXME shared between groups but no sharing is even fine because it is a lesser filter
     private val relationships = HashSet<Relationship>()
     private val relationshipsIncoming = HashSet<Relationship>()
     private val relationshipsOutgoing = HashSet<Relationship>()
@@ -122,7 +122,7 @@ class MyNode(private val variable: String = "") : MyEntity(), Node {
         return labels.contains(label)
     }
 
-    override fun getLabels(): List<Label> {
+    override fun getLabels(): Iterable<Label> {
         return labels
     }
 
@@ -136,7 +136,7 @@ class MyNode(private val variable: String = "") : MyEntity(), Node {
 
     private fun labelString(): String {
         if (labels.isEmpty()) {
-            return "no labels"
+            return ""
         }
         return labels.joinToString(", ")
     }

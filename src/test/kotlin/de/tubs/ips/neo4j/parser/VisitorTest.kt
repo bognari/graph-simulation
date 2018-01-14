@@ -1,25 +1,10 @@
 package de.tubs.ips.neo4j.parser
 
 
-import de.tubs.ips.neo4j.grammar.CypherLexer
-import de.tubs.ips.neo4j.grammar.CypherParser
-import org.antlr.v4.runtime.CharStreams
-import org.antlr.v4.runtime.CommonTokenStream
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class VisitorTest {
-
-    private fun setupVisitor(pattern: String): Visitor {
-        val lexer = CypherLexer(CharStreams.fromString(pattern, "user input"))
-        val commonTokenStream = CommonTokenStream(lexer)
-        val parser = CypherParser(commonTokenStream)
-        val context = parser.cypher()
-        val visitor = Visitor()
-        visitor.visit(context)
-
-        return visitor
-    }
 
     @Test
     @Throws(Throwable::class)
@@ -27,7 +12,7 @@ class VisitorTest {
         val pattern = """Optional MATCH (you {name:"You"})-[:FRIEND]->(yourFriends)
                 RETURN you, yourFriends"""
 
-        val visitor = setupVisitor(pattern)
+        val visitor = Visitor.setupVisitor(pattern)
 
         assertEquals(0, visitor.variables.size)
         assertEquals(1, visitor.groups.size)
@@ -43,7 +28,7 @@ class VisitorTest {
                 MATCH (anna:Person {name:"Anna"})
                 RETURN neo"""
 
-        val visitor = setupVisitor(pattern)
+        val visitor = Visitor.setupVisitor(pattern)
 
         assertEquals(0, visitor.variables.size)
         assertEquals(2, visitor.groups.size)
@@ -61,7 +46,7 @@ class VisitorTest {
                 MATCH (you)-[:FRIEND*..5]-(expert)
                 RETURN db, expert, path"""
 
-        val visitor = setupVisitor(pattern)
+        val visitor = Visitor.setupVisitor(pattern)
 
         assertEquals(visitor.variables.size, 0)
         assertEquals(visitor.groups.size, 3)
@@ -79,7 +64,7 @@ class VisitorTest {
         val pattern = """MATCH (p:Product {productName:"Chocolade"})<-[:PRODUCT]-(:Order)<-[:PURCHASED]-(c:Customer)
                 RETURN distinct c.companyName;"""
 
-        val visitor = setupVisitor(pattern)
+        val visitor = Visitor.setupVisitor(pattern)
 
         assertEquals(visitor.variables.size, 0)
         assertEquals(visitor.groups.size, 1)
@@ -95,7 +80,7 @@ class VisitorTest {
                 RETURN p.productName, toInt(sum(pu.unitPrice * pu.quantity)) AS volume
                 ORDER BY volume DESC;"""
 
-        val visitor = setupVisitor(pattern)
+        val visitor = Visitor.setupVisitor(pattern)
 
         assertEquals(visitor.variables.size, 0)
         assertEquals(visitor.groups.size, 2)
@@ -112,7 +97,7 @@ class VisitorTest {
                 RETURN e.name, count(*) AS cnt
                 ORDER BY cnt DESC LIMIT 10"""
 
-        val visitor = setupVisitor(pattern)
+        val visitor = Visitor.setupVisitor(pattern)
 
         assertEquals(visitor.variables.size, 0)
         assertEquals(visitor.groups.size, 1)
@@ -130,7 +115,7 @@ class VisitorTest {
                 RETURN country.name,nb_voting,year_voting,nb_participation,year_participation
                 ORDER BY nb_participation DESC"""
 
-        val visitor = setupVisitor(pattern)
+        val visitor = Visitor.setupVisitor(pattern)
 
         assertEquals(visitor.variables.size, 0)
         assertEquals(visitor.groups.size, 2)
@@ -152,7 +137,7 @@ class VisitorTest {
                 RETURN country.name,year, all1_score,up_score
                 ORDER BY year,all1_score DESC"""
 
-        val visitor = setupVisitor(pattern)
+        val visitor = Visitor.setupVisitor(pattern)
 
         assertEquals(visitor.variables.size, 0)
         assertEquals(visitor.groups.size, 2)
@@ -170,7 +155,7 @@ WITH COLLECT(nt.name) AS processNodeTypes
 MATCH (m) WHERE LENGTH(FILTER(lbl IN labels(m) WHERE lbl IN processNodeTypes)) > 0
 RETURN m LIMIT 50;"""
 
-        val visitor = setupVisitor(pattern)
+        val visitor = Visitor.setupVisitor(pattern)
 
         assertEquals(visitor.variables.size, 0)
         assertEquals(visitor.groups.size, 2)
@@ -187,7 +172,7 @@ RETURN m LIMIT 50;"""
 OPTIONAL MATCH (vw)--(ctl:MvcController)
 RETURN css, vw, ctl;"""
 
-        val visitor = setupVisitor(pattern)
+        val visitor = Visitor.setupVisitor(pattern)
 
         assertEquals(visitor.variables.size, 0)
         assertEquals(visitor.groups.size, 2)
@@ -206,7 +191,7 @@ MATCH (css_file)--(vw:MvcView)
 MATCH (vw)-[*1..3]-(feature:Feature)
 RETURN DISTINCT checkin, css_file, vw, feature;"""
 
-        val visitor = setupVisitor(pattern)
+        val visitor = Visitor.setupVisitor(pattern)
 
         assertEquals(visitor.variables.size, 0)
         assertEquals(visitor.groups.size, 4)
@@ -230,7 +215,7 @@ MATCH (vw)-[*1..3]-(feature:Feature)
 MATCH (t_case:TestCase)--(t_suite:TestSuite)-[*1..2]-(feature)
 RETURN DISTINCT t_suite.name AS `Test Suite`, t_case.name AS `Test CASE`;"""
 
-        val visitor = setupVisitor(pattern)
+        val visitor = Visitor.setupVisitor(pattern)
 
         assertEquals(visitor.variables.size, 0)
         assertEquals(visitor.groups.size, 5)

@@ -1,18 +1,37 @@
 package de.tubs.ips.neo4j.parser
 
 import de.tubs.ips.neo4j.grammar.CypherBaseVisitor
+import de.tubs.ips.neo4j.grammar.CypherLexer
 import de.tubs.ips.neo4j.grammar.CypherParser
 import de.tubs.ips.neo4j.graph.Group
 import de.tubs.ips.neo4j.graph.MyNode
 import de.tubs.ips.neo4j.graph.MyRelationship
 import de.tubs.ips.neo4j.graph.MyRelationshipPrototype
+import org.antlr.v4.runtime.CharStreams
+import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.tree.TerminalNode
-import org.neo4j.graphdb.*
+import org.neo4j.graphdb.Direction
+import org.neo4j.graphdb.Entity
+import org.neo4j.graphdb.Label
+import org.neo4j.graphdb.Node
 
 class Visitor : CypherBaseVisitor<Any>() {
 
+    companion object {
+        fun setupVisitor(pattern: String): Visitor {
+            val lexer = CypherLexer(CharStreams.fromString(pattern, "user input"))
+            val commonTokenStream = CommonTokenStream(lexer)
+            val parser = CypherParser(commonTokenStream)
+            val context = parser.cypher()
+            val visitor = Visitor()
+            visitor.visit(context)
+
+            return visitor
+        }
+    }
+
     enum class DetailConstants {
-        TYPES, VARIABLE, PROPERTIES, RANGES
+        TYPE, VARIABLE, PROPERTIES, RANGES
     }
 
     val variables: MutableMap<String, Variable> = HashMap()
@@ -214,7 +233,8 @@ class Visitor : CypherBaseVisitor<Any>() {
         var rightArrow = false
         var leftArrow = false
         var details: Map<DetailConstants, Any>? = null
-        var variable: String? = null
+        var type: String? = null
+        var properties: Map<String, Any>? = null
 
         for (child in ctx.children) {
             when (child) {
@@ -225,7 +245,8 @@ class Visitor : CypherBaseVisitor<Any>() {
         }
 
         if (details != null) {
-            variable = details[DetailConstants.VARIABLE] as String?
+            type = details[DetailConstants.TYPE] as String?
+            properties = details[DetailConstants.PROPERTIES] as Map<String, Any>?
         }
 
         val direction = when {
@@ -235,29 +256,7 @@ class Visitor : CypherBaseVisitor<Any>() {
             else -> null
         }
 
-        val prototype = if (variable != null) {
-            group.relationshipsDirectory.getOrPut(variable, { MyRelationshipPrototype(direction, variable) })
-        } else {
-            MyRelationshipPrototype(direction)
-        }
-
-        if (details != null) {
-            val types = details[DetailConstants.TYPES] as List<String>?
-
-            if (types != null) {
-                for (type in types) {
-                    prototype.addType(RelationshipType.withName(type))
-                }
-            }
-
-            val properties = details[DetailConstants.PROPERTIES] as Map<String, Any>?
-
-            if (properties != null) {
-                prototype.setProperty(properties)
-            }
-        }
-
-        return prototype
+        return MyRelationshipPrototype(direction, type, properties)
     }
 
     override fun visitRelationshipDetail(ctx: CypherParser.RelationshipDetailContext): HashMap<DetailConstants, Any> {
@@ -266,7 +265,7 @@ class Visitor : CypherBaseVisitor<Any>() {
         for (child in ctx.children) {
             when (child) {
                 is CypherParser.VariableContext -> values.put(DetailConstants.VARIABLE, visitVariable(child))
-                is CypherParser.RelationshipTypesContext -> values.put(DetailConstants.TYPES, visitRelationshipTypes(child))
+                is CypherParser.RelationshipTypesContext -> values.put(DetailConstants.TYPE, visitRelationshipTypes(child))
                 is CypherParser.RangeLiteralContext -> values.put(DetailConstants.RANGES, visitRangeLiteral(child))
                 is CypherParser.PropertiesContext -> values.put(DetailConstants.PROPERTIES, visitProperties(child))
             }
@@ -275,16 +274,16 @@ class Visitor : CypherBaseVisitor<Any>() {
         return values
     }
 
-    override fun visitRelationshipTypes(ctx: CypherParser.RelationshipTypesContext): ArrayList<String> {
-        val types = ArrayList<String>()
+    override fun visitRelationshipTypes(ctx: CypherParser.RelationshipTypesContext): String {
+        lateinit var type: String
 
         for (child in ctx.children) {
             when (child) {
-                is CypherParser.RelTypeNameContext -> types.add(visitRelTypeName(child))
+                is CypherParser.RelTypeNameContext -> type = visitRelTypeName(child)
             }
         }
 
-        return types
+        return type
     }
 
     inner class Variable {

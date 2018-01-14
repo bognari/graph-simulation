@@ -7,12 +7,16 @@ data class Group(val mode: Mode) {
     }
 
     val nodesDirectory: MutableMap<String, MyNode> = HashMap()
-    val relationshipsDirectory: MutableMap<String, MyRelationshipPrototype> = HashMap()
     val nodes: MutableList<MyNode> = ArrayList()
     val relationships: MutableList<MyRelationship> = ArrayList()
+    var diameter: Int = -1
+
+    //private val graph: Graph<MyNode, MyRelationship>? = null
+    //private val graphMeasurer: GraphMeasurer<MyNode, MyRelationship>? = null
 
     override fun toString(): String {
-        return "Group(mode=$mode, nodesDirectory=$nodesDirectory, relationshipsDirectory=$relationshipsDirectory, nodes=$nodes, relationships=$relationships)"
+        return "Group(mode=$mode, nodesDirectory=$nodesDirectory, nodes=$nodes, relationships=$relationships)"
     }
 
+    
 }

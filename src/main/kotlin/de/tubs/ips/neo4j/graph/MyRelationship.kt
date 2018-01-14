@@ -6,7 +6,6 @@ class MyRelationship(private val prototype: MyRelationshipPrototype, private val
 
     init {
         prototype.relationships.add(this)
-
         when (direction) {
             Direction.OUTGOING -> {
                 start.insertOutgoingRelationship(this)
@@ -21,14 +20,6 @@ class MyRelationship(private val prototype: MyRelationshipPrototype, private val
                 end.insertNullRelationship(this)
             }
         }
-    }
-
-    fun isOrRelationship(): Boolean {
-        return direction == null
-    }
-
-    fun getOtherRelationships(): List<MyRelationship> {
-        return prototype.relationships
     }
 
     override fun delete() {
@@ -55,31 +46,20 @@ class MyRelationship(private val prototype: MyRelationshipPrototype, private val
         return arrayOf(start, end)
     }
 
-    override fun getType(): RelationshipType {
-        throw UnsupportedOperationException()
+    override fun getType(): RelationshipType? {
+        return prototype.type
     }
 
-    override fun isType(relationshipType: RelationshipType?): Boolean {
-        return prototype.hasType(relationshipType)
+    override fun isType(relationshipType: RelationshipType): Boolean {
+        return relationshipType == prototype.type
     }
 
     override fun toString(): String {
         return when (direction) {
-            Direction.INCOMING -> "$start <-${typesString()}- $end <${prototype.parsingDirection}>"
-            Direction.OUTGOING -> "$start -${typesString()}-> $end <${prototype.parsingDirection}>"
-            Direction.BOTH -> "$start <-${typesString()}-> $end <${prototype.parsingDirection}>"
-            else -> "$start -${typesString()}- $end <${prototype.parsingDirection}>"
+            Direction.INCOMING -> "$start <-[${prototype.type}]- $end <${prototype.parsingDirection}>"
+            Direction.OUTGOING -> "$start -[${prototype.type}]-> $end <${prototype.parsingDirection}>"
+            Direction.BOTH -> "$start <-[${prototype.type}]-> $end <${prototype.parsingDirection}>"
+            else -> "$start -[${prototype.type}]- $end <${prototype.parsingDirection}>"
         }
-    }
-
-    private fun variableString(): String {
-        if (prototype.variable.isEmpty()) {
-            return ""
-        }
-        return "<${prototype.variable}> "
-    }
-
-    private fun typesString(): String {
-        return "[${variableString()}${prototype.types.joinToString(", ")}]"
     }
 }

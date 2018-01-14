@@ -3,15 +3,19 @@ package de.tubs.ips.neo4j.graph
 import org.neo4j.graphdb.Direction
 import org.neo4j.graphdb.RelationshipType
 
-data class MyRelationshipPrototype(val parsingDirection: Direction?, internal val variable: String = "") : MyEntity() {
-    internal val types = ArrayList<RelationshipType>()
+data class MyRelationshipPrototype(val parsingDirection: Direction?, private val typePrototype: String?, private val properties: Map<String, Any>?) : MyEntity() {
+
     internal val relationships = ArrayList<MyRelationship>()
+    internal val type: RelationshipType?
 
-    fun addType(type: RelationshipType) {
-        types.add(type)
-    }
-
-    fun hasType(relationshipType: RelationshipType?): Boolean {
-        return types.contains(relationshipType)
+    init {
+        if (properties != null) {
+            setProperty(properties)
+        }
+        type = if (typePrototype == null) {
+            null
+        } else {
+            RelationshipType.withName(typePrototype)
+        }
     }
 }
