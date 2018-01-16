@@ -31,12 +31,13 @@ class Visitor : CypherBaseVisitor<Any>() {
     }
 
     enum class DetailConstants {
-        TYPE, VARIABLE, PROPERTIES, RANGES
+        TYPES, VARIABLE, PROPERTIES, RANGES
     }
 
     val variables: MutableMap<String, Variable> = HashMap()
     val groups: MutableList<Group> = ArrayList()
     private lateinit var group: Group
+    private val normalMatch: Group = Group(Group.Mode.MATCH)
 
     @Suppress("UNCHECKED_CAST")
     override fun visitNodePattern(ctx: CypherParser.NodePatternContext): Node {
@@ -89,7 +90,7 @@ class Visitor : CypherBaseVisitor<Any>() {
     }
 
     override fun visitMapLiteral(ctx: CypherParser.MapLiteralContext): Map<String, Any> {
-        val list = ArrayList<Any>()
+        val list = ArrayList<Any?>()
 
         for (child in ctx.children) {
             when (child) {
@@ -102,32 +103,39 @@ class Visitor : CypherBaseVisitor<Any>() {
 
         var i = 0
         while (i < list.size) {
-            ret.put(list[i] as String, list[i + 1])
-            i += 2
+            if (list[i] != null && list[i + 1] != null) {
+                ret.put(list[i] as String, list[i + 1] as Any)
+                i += 2
+            }
         }
 
         return ret
     }
 
-    override fun visitLiteral(ctx: CypherParser.LiteralContext): Any {
-        for (child in ctx.children) {
-            when (child) {
-                is TerminalNode -> return child.text
-                is CypherParser.BooleanLiteralContext -> return "true".equals(child.text, true)
-                is CypherParser.MapLiteralContext -> return visitMapLiteral(child)
+    override fun visitLiteral(ctx: CypherParser.LiteralContext): Any? {
+        val child = ctx.getChild(0)
+        return when (child) {
+            is TerminalNode -> child.text.substring(1, child.text.length - 1)
+            is CypherParser.BooleanLiteralContext -> "true".equals(child.text, true)
+            is CypherParser.NumberLiteralContext -> visitNumberLiteral(child)
+            else -> {
+                println("warning: unsupported properties type ${child::class.java.simpleName}")
             }
         }
-        return super.visitLiteral(ctx)
+    }
+
+    override fun visitDoubleLiteral(ctx: CypherParser.DoubleLiteralContext): Double {
+        return ctx.getChild(0).text.toDouble()
     }
 
     override fun visitIntegerLiteral(ctx: CypherParser.IntegerLiteralContext): Int {
         val value = ctx.text
 
         return when {
-            value.startsWith("0x") -> Integer.valueOf(value.substring(2), 16)
-            value.startsWith("0b") -> Integer.valueOf(value.substring(2), 2)
-            value.startsWith("0") -> Integer.valueOf(value.substring(1), 8)
-            else -> Integer.valueOf(value)
+            value.startsWith("0x") -> value.substring(2).toInt(16)
+            value.startsWith("0b") -> value.substring(2).toInt(2)
+            value.startsWith("0") -> value.substring(1).toInt(8)
+            else -> value.toInt()
         }
     }
 
@@ -145,10 +153,12 @@ class Visitor : CypherBaseVisitor<Any>() {
         group = if (optional) {
             Group(Group.Mode.OPTIONAL)
         } else {
-            Group(Group.Mode.MATCH)
+            normalMatch
         }
 
-        groups.add(group)
+        if (!groups.contains(group)) {
+            groups.add(group)
+        }
 
         visitPattern(pattern)
 
@@ -201,11 +211,8 @@ class Visitor : CypherBaseVisitor<Any>() {
                             group.relationships.add(MyRelationship(prototype, start, end, Direction.INCOMING))
                         }
                         Direction.BOTH -> {
-                            group.relationships.add(MyRelationship(prototype, start, end, Direction.OUTGOING))
-                            group.relationships.add(MyRelationship(prototype, start, end, Direction.INCOMING))
-                        }
-                        else -> {
-                            group.relationships.add(MyRelationship(prototype, start, end, null))
+                            group.relationships.add(MyRelationship(prototype, start, end, Direction.BOTH))
+                            group.relationships.add(MyRelationship(prototype, end, start, Direction.BOTH))
                         }
                     }
                 }
@@ -233,7 +240,7 @@ class Visitor : CypherBaseVisitor<Any>() {
         var rightArrow = false
         var leftArrow = false
         var details: Map<DetailConstants, Any>? = null
-        var type: String? = null
+        var types: List<String>? = null
         var properties: Map<String, Any>? = null
 
         for (child in ctx.children) {
@@ -245,18 +252,17 @@ class Visitor : CypherBaseVisitor<Any>() {
         }
 
         if (details != null) {
-            type = details[DetailConstants.TYPE] as String?
+            types = details[DetailConstants.TYPES] as List<String>?
             properties = details[DetailConstants.PROPERTIES] as Map<String, Any>?
         }
 
         val direction = when {
-            rightArrow && leftArrow -> Direction.BOTH
-            rightArrow -> Direction.OUTGOING
-            leftArrow -> Direction.INCOMING
-            else -> null
+            rightArrow && !leftArrow -> Direction.OUTGOING
+            leftArrow && !rightArrow -> Direction.INCOMING
+            else -> Direction.BOTH
         }
 
-        return MyRelationshipPrototype(direction, type, properties)
+        return MyRelationshipPrototype(direction, types, properties)
     }
 
     override fun visitRelationshipDetail(ctx: CypherParser.RelationshipDetailContext): HashMap<DetailConstants, Any> {
@@ -265,7 +271,7 @@ class Visitor : CypherBaseVisitor<Any>() {
         for (child in ctx.children) {
             when (child) {
                 is CypherParser.VariableContext -> values.put(DetailConstants.VARIABLE, visitVariable(child))
-                is CypherParser.RelationshipTypesContext -> values.put(DetailConstants.TYPE, visitRelationshipTypes(child))
+                is CypherParser.RelationshipTypesContext -> values.put(DetailConstants.TYPES, visitRelationshipTypes(child))
                 is CypherParser.RangeLiteralContext -> values.put(DetailConstants.RANGES, visitRangeLiteral(child))
                 is CypherParser.PropertiesContext -> values.put(DetailConstants.PROPERTIES, visitProperties(child))
             }
@@ -274,16 +280,16 @@ class Visitor : CypherBaseVisitor<Any>() {
         return values
     }
 
-    override fun visitRelationshipTypes(ctx: CypherParser.RelationshipTypesContext): String {
-        lateinit var type: String
+    override fun visitRelationshipTypes(ctx: CypherParser.RelationshipTypesContext): List<String> {
+        val types = ArrayList<String>()
 
         for (child in ctx.children) {
             when (child) {
-                is CypherParser.RelTypeNameContext -> type = visitRelTypeName(child)
+                is CypherParser.RelTypeNameContext -> types.add(visitRelTypeName(child))
             }
         }
 
-        return type
+        return types
     }
 
     inner class Variable {

@@ -3,7 +3,6 @@ package de.tubs.ips.neo4j.simulation
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.Relationship
 import org.neo4j.graphdb.ResourceIterable
-import java.util.stream.Stream
 
 
 class Ball(val center: Node, diameter: Int) : IDB {
@@ -21,6 +20,8 @@ class Ball(val center: Node, diameter: Int) : IDB {
     init {
         this.nodes = HashSet()
         this.relationships = ArrayList()
+        nodes.add(center)
+
         init(center, diameter)
     }
 
@@ -42,10 +43,9 @@ class Ball(val center: Node, diameter: Int) : IDB {
     }
 
     companion object {
-        fun createBalls(nodes: ResourceIterable<Node>, diameter: Int): Stream<Ball> {
-            return nodes.stream()
-                    //.parallel()
-                    .map { node -> Ball(node, diameter) }
+        fun createBalls(nodes: ResourceIterable<Node>, diameter: Int): Sequence<Ball> {
+            return nodes.asSequence()
+                    .map { Ball(it, diameter) }
         }
     }
 }

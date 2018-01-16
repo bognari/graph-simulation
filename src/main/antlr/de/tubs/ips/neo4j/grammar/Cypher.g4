@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-grammar Cypher;
+grammar Cypher; 
 
 @header {
 package de.tubs.ips.neo4j.grammar;

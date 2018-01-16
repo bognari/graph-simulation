@@ -31,26 +31,21 @@ class MyProcedureTest {
                     session.run(statement)
                 }
 
-                val o = session.run("""MATCH (c:Character {name: 'Ranjit'})-[:APPEARED_IN_EPISODE]->(e)
-                        RETURN c.name, e.season, e.number, e.title, id(e) ORDER BY e.season, e.number""")
-
-                while (o.hasNext()) {
-                    val record = o.next()
-
-                    val map = record.asMap()
-                    println(map)
-                }
+                val list = session.run("""match (a)-->(b:Character) Match (b)--(c) return a, b, c""").asSequence().toList()
 
                 println(session.run("Match (a) RETURN count(a)").next())
 
 
                 println(session.run("Match (a:Character) RETURN count(a)").next())
-
+                
                 // When
-                val result = session.run("""CALL myprocedure.dualSimulation('
-                    MATCH (c:Character {name: \'Ranjit\'})-[:APPEARED_IN_EPISODE]->(e)
-                        RETURN c.name, e.season, e.number, e.title, id(e) ORDER BY e.season, e.number
-                        ', 'test')""")
+                val result = session.run("""CALL myprocedure.dualSimulation("
+                    match (a)-->(b:Character) Match (b)--(c) return a, b, c
+                        ", 'test')""")
+
+                val rList = result.asSequence().toList()
+
+                println()
 
                 // Then
             })

@@ -1,8 +1,12 @@
 package de.tubs.ips.neo4j.procedure
 
+import de.tubs.ips.neo4j.graph.Group
+import de.tubs.ips.neo4j.graph.MyNode
 import de.tubs.ips.neo4j.parser.Visitor
 import de.tubs.ips.neo4j.simulation.StrongSimulation
 import org.neo4j.graphdb.GraphDatabaseService
+import org.neo4j.graphdb.Label
+import org.neo4j.graphdb.Node
 import org.neo4j.logging.Log
 import org.neo4j.procedure.*
 import java.util.stream.Stream
@@ -32,20 +36,96 @@ class MyProcedure {
     fun simulation(@Name("pattern") pattern: String,
                    @Name("sim") sim: String
     ): Stream<Output>? {
-        log!!.info("start with pattern:\"$pattern\" and sim:\"$sim\"")
+        val trimmedPattern = pattern.trim()
 
-        println()
+        log!!.info("start with pattern:\"$trimmedPattern\" and sim:\"$sim\"")
 
-        val visitor = Visitor.setupVisitor(pattern)
+        val visitor = Visitor.setupVisitor(trimmedPattern)
         val simulation = StrongSimulation(visitor, db!!)
         val result = simulation.dualSimulation()
+
+        writeLabels(result)
+
+        val query = rewriteQuery(trimmedPattern, result)
+        val ret = db!!.execute(query)
+
+        val retList = ret.asSequence().toList()
+
+        removeLabels(result)
+
+        /*val ret_1 = ret.asSequence().toList()
+
+        val ret_0 = db!!.execute(pattern).asSequence().toList()
         
+        val ret_a = db!!.execute("match (a:g0_a) return a").asSequence().toList()
+        val ret_b = db!!.execute("match (b:g0_b) return b").asSequence().toList()
+        val ret_c = db!!.execute("match (c:g0_c) return c").asSequence().toList()
 
-        return null
+
+        val labels = db!!.allLabels
+
+        val listLabels = ArrayList<Label>()
+        listLabels.addAll(labels)
+
+
+
+        val statistics = ret.queryStatistics
+
+        val colums = ret.columns()
+        */
+
+
+        return retList.stream().map { Output(it) }
     }
 
-    class Output() {
-        @JvmField
-        public var content: Any? = null
+    private fun writeLabels(result: Map<Group, Map<MyNode, Set<Node>>>) {
+        for ((group, map) in result) {
+            for ((node, list) in map) {
+                if (node.variable.isNotBlank()) {
+                    val label = genLabelString(group, node)
+                    for (possibleNode in list) {
+                        possibleNode.addLabel(Label.label(label))
+                    }
+                }
+            }
+        }
     }
+
+
+    private fun removeLabels(result: Map<Group, Map<MyNode, Set<Node>>>) {
+        for ((group, map) in result) {
+            for ((node, list) in map) {
+                if (node.variable.isNotBlank()) {
+                    val label = genLabelString(group, node)
+                    for (possibleNode in list) {
+                        possibleNode.removeLabel(Label.label(label))
+                    }
+                }
+            }
+        }
+    }
+
+    private fun rewriteQuery(pattern: String, result: Map<Group, Map<MyNode, Set<Node>>>): String {
+        var query = pattern
+        val labels = HashSet<String>()
+        for ((group, map) in result) {
+            for ((node, _) in map) {
+                if (node.variable.isNotBlank()) {
+                    val label = genLabelString(group, node)
+                    if (labels.add(label)) {
+                        query = query.replaceFirst("\\(\\s*${node.variable}".toRegex(), "(${node.variable}:$label")
+                    }
+                }
+            }
+        }
+
+        return query
+    }
+
+    private fun genLabelString(group: Group, node: MyNode): String {
+        return "g${group.number}_${node.variable}"
+    }
+
+    class Output(@JvmField
+                 public var content: Map<String, Any>) {}
 }

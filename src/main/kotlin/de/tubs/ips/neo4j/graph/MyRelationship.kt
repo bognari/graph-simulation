@@ -2,24 +2,17 @@ package de.tubs.ips.neo4j.graph
 
 import org.neo4j.graphdb.*
 
-class MyRelationship(private val prototype: MyRelationshipPrototype, private val start: MyNode, private val end: MyNode, private val direction: Direction?) : Entity by prototype, Relationship {
+/**
+ * jede relation innerhalb der Db hat eine richtung, OUTGOING oder INCOMING
+ * -- und <--> haben die gleiche bedeutung...
+ */
+
+class MyRelationship(private val prototype: MyRelationshipPrototype, private val start: MyNode, private val end: MyNode, val direction: Direction) : Entity by prototype, Relationship {
 
     init {
         prototype.relationships.add(this)
-        when (direction) {
-            Direction.OUTGOING -> {
-                start.insertOutgoingRelationship(this)
-                end.insertIncomingRelationship(this)
-            }
-            Direction.INCOMING -> {
-                start.insertIncomingRelationship(this)
-                end.insertOutgoingRelationship(this)
-            }
-            else -> {
-                start.insertNullRelationship(this)
-                end.insertNullRelationship(this)
-            }
-        }
+        start.addRelationship(this)
+        end.addRelationship(this)
     }
 
     override fun delete() {
@@ -47,19 +40,27 @@ class MyRelationship(private val prototype: MyRelationshipPrototype, private val
     }
 
     override fun getType(): RelationshipType? {
-        return prototype.type
+        throw UnsupportedOperationException()
     }
 
     override fun isType(relationshipType: RelationshipType): Boolean {
-        return relationshipType == prototype.type
+        return prototype.types.contains(relationshipType)
+    }
+
+    fun typesString() : String {
+        return prototype.types.joinToString("|", prefix = "[", postfix = "]", transform = { it.name() })
     }
 
     override fun toString(): String {
         return when (direction) {
-            Direction.INCOMING -> "$start <-[${prototype.type}]- $end <${prototype.parsingDirection}>"
-            Direction.OUTGOING -> "$start -[${prototype.type}]-> $end <${prototype.parsingDirection}>"
-            Direction.BOTH -> "$start <-[${prototype.type}]-> $end <${prototype.parsingDirection}>"
-            else -> "$start -[${prototype.type}]- $end <${prototype.parsingDirection}>"
+            Direction.INCOMING -> "$start <-${typesString()}- $end <${prototype.parsingDirection}>"
+            Direction.OUTGOING -> "$start -${typesString()}-> $end <${prototype.parsingDirection}>"
+            Direction.BOTH -> "$start <-${typesString()}-> $end <${prototype.parsingDirection}>"
+            else -> "$start -${typesString()}- $end <${prototype.parsingDirection}>"
         }
+    }
+
+    fun match(other: Relationship): Boolean {
+        return prototype.matchTypes(other) && prototype.matchProperties(other)
     }
 }

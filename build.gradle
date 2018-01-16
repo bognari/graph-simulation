@@ -1,6 +1,11 @@
 group 'de.tubs.ips'
 version '1.0-SNAPSHOT'
 
+/**
+ * on windows set JAVA_HOME !!!!
+ * if not kotlin fails to compile
+ */
+
 buildscript {
     ext {
         kotlin_version = '1.2.10'
@@ -30,6 +35,7 @@ repositories {
 
 dependencies {
     compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: kotlin_version
+    compile group: 'org.jgrapht', name: 'jgrapht-core', version: jgrapht_version
     compile group: 'org.neo4j', name: 'neo4j', version: neo4j_version
     testCompile group: 'junit', name: 'junit', version: junit_version
     testCompile group: 'org.neo4j.test', name: 'neo4j-harness', version: neo4j_version
@@ -39,7 +45,6 @@ dependencies {
     compile group: 'org.antlr', name: 'antlr4', version: antlr_version
     // https://mvnrepository.com/artifact/org.antlr/antlr4-runtime
     compile group: 'org.antlr', name: 'antlr4-runtime', version: antlr_version
-    compile group: 'org.jgrapht', name: 'jgrapht', version: jgrapht_version
 }
 
 
@@ -53,6 +58,7 @@ compileKotlin {
     kotlinOptions.jvmTarget = '1.8'
 }
 compileTestKotlin {
+    dependsOn generateGrammarSource
     kotlinOptions.jvmTarget = '1.8'
 }
 

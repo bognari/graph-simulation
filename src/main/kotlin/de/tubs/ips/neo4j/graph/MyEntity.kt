@@ -4,7 +4,7 @@ import org.neo4j.graphdb.Entity
 import org.neo4j.graphdb.GraphDatabaseService
 
 abstract class MyEntity : Entity {
-    private var properties: MutableList<Map<String, Any>> = ArrayList()
+    private val properties: MutableMap<String, Any> = HashMap()
 
     override fun getId(): Long {
         throw UnsupportedOperationException()
@@ -15,28 +15,23 @@ abstract class MyEntity : Entity {
     }
 
     override fun hasProperty(s: String): Boolean {
-        return properties.any { it.containsKey(s) }
+        return properties.containsKey(s)
     }
 
     fun setProperty(map: Map<String, Any>) {
-        properties.add(map)
+        properties.putAll(map)
     }
 
     override fun getProperty(s: String): Any? {
-        return properties
-                .firstOrNull { it.containsKey(s) }
-                ?.let { it[s] }
+        return properties[s]
     }
 
     override fun getProperty(s: String, o: Any?): Any? {
-        return properties
-                .firstOrNull { it.containsKey(s) }
-                ?.let { it[s] }
-                ?: o
+        return properties.getOrDefault(s, o)
     }
 
     override fun setProperty(s: String, o: Any) {
-        throw UnsupportedOperationException()
+        properties[s] = o
     }
 
     override fun removeProperty(s: String): Any {
@@ -44,19 +39,24 @@ abstract class MyEntity : Entity {
     }
 
     override fun getPropertyKeys(): Iterable<String> {
-        val keys = ArrayList<String>()
-        for (map in properties) {
-            keys.addAll(map.keys)
-        }
-
-        return keys
+        return properties.keys
     }
 
     override fun getProperties(vararg strings: String): Map<String, Any> {
-        throw UnsupportedOperationException()
+        return properties.filterKeys { strings.contains(it) }
     }
 
     override fun getAllProperties(): Map<String, Any> {
-        throw UnsupportedOperationException()
+        return properties
+    }
+
+    fun matchProperties(other : Entity) : Boolean {
+        for ((key, value) in properties) {
+            if (!other.hasProperty(key) || value != other.getProperty(key)) {
+                return false
+            }
+        }
+
+        return true
     }
 }

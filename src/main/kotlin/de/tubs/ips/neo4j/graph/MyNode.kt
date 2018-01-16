@@ -2,10 +2,10 @@ package de.tubs.ips.neo4j.graph
 
 import org.neo4j.graphdb.*
 
-class MyNode(private val variable: String = "") : MyEntity(), Node {
+class MyNode(val variable: String = "") : MyEntity(), Node {
 
     private val labels = HashSet<Label>() // FIXME shared between groups but no sharing is even fine because it is a lesser filter
-    private val relationships = HashSet<Relationship>()
+    private val relationships = HashSet<Relationship>() // FIXME jede relation darf nur einmal im Patternpfad vorkommen
     private val relationshipsIncoming = HashSet<Relationship>()
     private val relationshipsOutgoing = HashSet<Relationship>()
 
@@ -65,29 +65,29 @@ class MyNode(private val variable: String = "") : MyEntity(), Node {
         throw UnsupportedOperationException()
     }
 
-    fun insertIncomingRelationship(relationship: Relationship) {
-        if (relationships.contains(relationship) || relationshipsIncoming.contains(relationship)) {
+    fun addRelationship(relationship: MyRelationship) {
+        if (relationships.contains(relationship)) {
             throw IllegalArgumentException()
         }
-        relationships.add(relationship)
-        relationshipsIncoming.add(relationship)
-    }
 
-    fun insertOutgoingRelationship(relationship: Relationship) {
-        if (relationships.contains(relationship) || relationshipsOutgoing.contains(relationship)) {
-            throw IllegalArgumentException()
-        }
         relationships.add(relationship)
-        relationshipsOutgoing.add(relationship)
-    }
 
-    fun insertNullRelationship(relationship: Relationship) {
-        if (relationships.contains(relationship) || relationshipsOutgoing.contains(relationship) || relationshipsIncoming.contains(relationship)) {
-            throw IllegalArgumentException()
+        when (relationship.direction) {
+            Direction.OUTGOING -> if (relationship.startNode === this) {
+                relationshipsOutgoing.add(relationship)
+            } else {
+                relationshipsIncoming.add(relationship)
+            }
+            Direction.INCOMING -> if (relationship.startNode === this) {
+                relationshipsIncoming.add(relationship)
+            } else {
+                relationshipsOutgoing.add(relationship)
+            }
+            Direction.BOTH -> {
+                relationshipsIncoming.add(relationship)
+                relationshipsOutgoing.add(relationship)
+            }
         }
-        relationships.add(relationship)
-        relationshipsOutgoing.add(relationship)
-        relationshipsIncoming.add(relationship)
     }
 
     override fun getRelationshipTypes(): Iterable<RelationshipType> {
@@ -138,17 +138,28 @@ class MyNode(private val variable: String = "") : MyEntity(), Node {
         if (labels.isEmpty()) {
             return ""
         }
-        return labels.joinToString(", ")
+        return labels.joinToString(", ", prefix = "[", postfix = "]")
     }
 
     private fun variableString(): String {
         if (variable.isEmpty()) {
             return ""
         }
-        return "<$variable> "
+        return "$variable "
     }
 
     override fun toString(): String {
         return "(${variableString()}${labelString()} <$degree|${relationshipsIncoming.size}|${relationshipsOutgoing.size}>)"
+    }
+
+    private fun matchLabels(other: Node): Boolean {
+        return labels.isEmpty() || labels.all { other.hasLabel(it) }
+    }
+
+    /**
+     * labels is an AND filter
+     */
+    fun match(other: Node): Boolean {
+        return matchLabels(other) && matchProperties(other)
     }
 }
