@@ -31,7 +31,7 @@ class MyProcedureTest {
                     session.run(statement)
                 }
 
-                val list = session.run("""match (a)-->(b:Character) Match (b)--(c) return a, b, c""").asSequence().toList()
+                val list = session.run("""match (a)-->(b:Character) Match (b)--(c) OPTIONAL MATCH (a:bla {name:'foobar'}) return a, b, c""").asSequence().toList()
 
                 println(session.run("Match (a) RETURN count(a)").next())
 
@@ -40,7 +40,7 @@ class MyProcedureTest {
                 
                 // When
                 val result = session.run("""CALL myprocedure.dualSimulation("
-                    match (a)-->(b:Character) Match (b)--(c) return a, b, c
+                    match (a)-->(b:Character) Match (b)--(c) Match ()-->(z) OPTIONAL MATCH (a:bla {name:'foobar'}) return a, b, c, z
                         ", 'test')""")
 
                 val rList = result.asSequence().toList()

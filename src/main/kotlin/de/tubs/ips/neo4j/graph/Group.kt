@@ -3,15 +3,12 @@ package de.tubs.ips.neo4j.graph
 import org.jgrapht.alg.shortestpath.GraphMeasurer
 import org.jgrapht.graph.SimpleGraph
 
-data class Group(val mode: Mode) {
+class Group {
 
-    enum class Mode {
-        MATCH, OPTIONAL
-    }
-
+    private val mode : String
     val nodesDirectory: MutableMap<String, MyNode> = HashMap()
-    val nodes: MutableList<MyNode> = ArrayList()
-    val relationships: MutableList<MyRelationship> = ArrayList()
+    val nodes: MutableSet<MyNode> = HashSet()
+    val relationships: MutableSet<MyRelationship> = HashSet()
     val number: Int
 
     companion object {
@@ -20,6 +17,35 @@ data class Group(val mode: Mode) {
 
     init {
         number = Group.number++
+    }
+
+    constructor() {
+        mode = "MATCH"
+    }
+
+    /**
+     * Unconnected anonymous nodes are not copied
+     */
+    constructor(other: Group) {
+        mode = "OPTIONAL"
+
+        for ((key, othernode) in other.nodesDirectory) {
+            val node = MyNode(this, othernode)
+            nodesDirectory[key] = node
+            nodes.add(node)
+        }
+
+        for (relationship in other.relationships) {
+            val otherstart = relationship.startNode
+            val otherend = relationship.endNode
+
+            val start = nodesDirectory.getOrDefault(otherstart.variable, MyNode(this, otherstart))
+            nodes.add(start)
+            val end = nodesDirectory.getOrDefault(otherend.variable, MyNode(this, otherend))
+            nodes.add(end)
+
+            relationships.add(MyRelationship(relationship, start, end))
+        }
     }
 
     val diameter: Int by lazy {

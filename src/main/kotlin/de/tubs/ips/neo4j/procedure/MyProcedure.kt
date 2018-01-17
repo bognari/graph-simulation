@@ -46,7 +46,7 @@ class MyProcedure {
 
         writeLabels(result)
 
-        val query = rewriteQuery(trimmedPattern, result)
+        val query = rewriteQuery(result, visitor)
         val ret = db!!.execute(query)
 
         val retList = ret.asSequence().toList()
@@ -105,21 +105,17 @@ class MyProcedure {
         }
     }
 
-    private fun rewriteQuery(pattern: String, result: Map<Group, Map<MyNode, Set<Node>>>): String {
-        var query = pattern
-        val labels = HashSet<String>()
+    private fun rewriteQuery(result: Map<Group, Map<MyNode, Set<Node>>>, visitor: Visitor): String {
         for ((group, map) in result) {
             for ((node, _) in map) {
                 if (node.variable.isNotBlank()) {
                     val label = genLabelString(group, node)
-                    if (labels.add(label)) {
-                        query = query.replaceFirst("\\(\\s*${node.variable}".toRegex(), "(${node.variable}:$label")
-                    }
+                    node.writeCTXLabel(":$label", visitor)
                 }
             }
         }
 
-        return query
+        return visitor.prettyPrint()
     }
 
     private fun genLabelString(group: Group, node: MyNode): String {

@@ -4,14 +4,13 @@ import org.neo4j.graphdb.Direction
 import org.neo4j.graphdb.Relationship
 import org.neo4j.graphdb.RelationshipType
 
-data class MyRelationshipPrototype(val parsingDirection: Direction, private val typesPrototype: List<String>?, private val properties: Map<String, Any>?) : MyEntity() {
+data class MyRelationshipPrototype(val parsingDirection: Direction, private val typesPrototype: List<String>?, private val prototypeProperties: Map<String, Any>?) : MyEntity() {
 
-    internal val relationships = ArrayList<MyRelationship>()
     val types = ArrayList<RelationshipType>()
 
     init {
-        if (properties != null) {
-            setProperty(properties)
+        if (prototypeProperties != null) {
+            setProperty(prototypeProperties)
         }
         typesPrototype?.mapTo(types) { RelationshipType.withName(it) }
     }

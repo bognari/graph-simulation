@@ -1,14 +1,22 @@
 package de.tubs.ips.neo4j.graph
 
+import de.tubs.ips.neo4j.grammar.CypherParser
+import de.tubs.ips.neo4j.parser.Visitor
 import org.neo4j.graphdb.*
 
-class MyNode(val variable: String = "") : MyEntity(), Node {
+class MyNode(val group: Group, val variable: String = "") : MyEntity(), Node {
 
     private val labels = HashSet<Label>() // FIXME shared between groups but no sharing is even fine because it is a lesser filter
     private val relationships = HashSet<Relationship>() // FIXME jede relation darf nur einmal im Patternpfad vorkommen
     private val relationshipsIncoming = HashSet<Relationship>()
     private val relationshipsOutgoing = HashSet<Relationship>()
+    val labelCtxs = HashSet<CypherParser.NodeLabelsContext>()
 
+    constructor(group: Group, other: MyNode) : this(group, other.variable) {
+        properties.putAll(other.properties)
+        labels.addAll(other.labels)
+    }
+    
     override fun delete() {
         throw UnsupportedOperationException()
     }
@@ -161,5 +169,11 @@ class MyNode(val variable: String = "") : MyEntity(), Node {
      */
     fun match(other: Node): Boolean {
         return matchLabels(other) && matchProperties(other)
+    }
+
+    fun writeCTXLabel(label : String, visitor: Visitor) {
+        for (ctx in labelCtxs) {
+            ctx.addChild(Visitor.PseudoToken(label, visitor.lexer))
+        }
     }
 }

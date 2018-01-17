@@ -10,12 +10,13 @@ import de.tubs.ips.neo4j.graph.MyRelationshipPrototype
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.tree.TerminalNode
+import org.antlr.v4.runtime.tree.TerminalNodeImpl
 import org.neo4j.graphdb.Direction
 import org.neo4j.graphdb.Entity
 import org.neo4j.graphdb.Label
 import org.neo4j.graphdb.Node
 
-class Visitor : CypherBaseVisitor<Any>() {
+class Visitor(val lexer : CypherLexer, val ctx : CypherParser.CypherContext) : CypherBaseVisitor<Any>() {
 
     companion object {
         fun setupVisitor(pattern: String): Visitor {
@@ -23,9 +24,9 @@ class Visitor : CypherBaseVisitor<Any>() {
             val commonTokenStream = CommonTokenStream(lexer)
             val parser = CypherParser(commonTokenStream)
             val context = parser.cypher()
-            val visitor = Visitor()
+            val visitor = Visitor(lexer, context)
             visitor.visit(context)
-
+            
             return visitor
         }
     }
@@ -36,40 +37,92 @@ class Visitor : CypherBaseVisitor<Any>() {
 
     val variables: MutableMap<String, Variable> = HashMap()
     val groups: MutableList<Group> = ArrayList()
-    private lateinit var group: Group
-    private val normalMatch: Group = Group(Group.Mode.MATCH)
+    private val normalMatch: Group = Group()
+    private var currentGroup = normalMatch
+
+    
+    private val matches = ArrayList<Match>()
+
+    enum class Mode {
+        MATCH, OPTIONAL
+    }
+
+    fun prettyPrint(): String  {
+        val pp = PrettyPrinter()
+        pp.visit(ctx)
+        return pp.text.toString()
+    }
+
+    override fun visitCypher(ctx: CypherParser.CypherContext?): Any? {
+        super.visitCypher(ctx)
+
+        computeMatches()
+
+        return null
+    }
+
+    private fun computeMatches() {
+
+        if (matches.any { it.mode == Mode.MATCH }) {
+            groups.add(currentGroup)
+        }
+
+        for (match in matches.filter { it.mode == Mode.MATCH }) {
+            visitPattern(match.context)
+        }
+
+        for (match in matches.filter { it.mode == Mode.OPTIONAL }) {
+            currentGroup = Group(normalMatch)
+            groups.add(currentGroup)
+            visitPattern(match.context)
+        }
+    }
 
     @Suppress("UNCHECKED_CAST")
     override fun visitNodePattern(ctx: CypherParser.NodePatternContext): Node {
         var variable: String? = null
         var labels: List<String>? = null
         var properties: Map<String, Any>? = null
+        var labelsContext: CypherParser.NodeLabelsContext? = null
+
 
         for (child in ctx.children) {
             when (child) {
                 is CypherParser.VariableContext -> variable = visitVariable(child)
-                is CypherParser.NodeLabelsContext -> labels = visitNodeLabels(child)
+                is CypherParser.NodeLabelsContext -> {
+                    labels = visitNodeLabels(child)
+                    labelsContext = child
+                }
                 is CypherParser.PropertiesContext -> properties = visitProperties(child) as Map<String, Any>
             }
         }
 
-        val node = if (variable != null) {
-            group.nodesDirectory.getOrPut(variable, { MyNode(variable) })
-        } else {
-            MyNode()
+        if (variable == null) {
+            variable = "g${currentGroup.number}n${currentGroup.nodes.size}"
+            val token = PseudoToken(variable, lexer)
+            token.parent = ctx
+            ctx.children.add(1, token)
         }
 
-        group.nodes.add(node)
+        if (labelsContext == null) {
+            labelsContext = CypherParser.NodeLabelsContext(ctx, 0)
+            ctx.children.add(2, labelsContext)
+        }
+
+        val node = currentGroup.nodesDirectory.getOrPut(variable, { MyNode(currentGroup, variable) })
+
+        node.labelCtxs.add(labelsContext)
+
+        currentGroup.nodes.add(node)
 
         if (labels != null) {
             for (label in labels) {
                 node.addLabel(Label.label(label))
             }
         }
+        
+        currentGroup.nodesDirectory.put(variable, node)
 
-        if (variable != null) {
-            group.nodesDirectory.put(variable, node)
-        }
 
         if (properties != null) {
             node.setProperty(properties)
@@ -86,6 +139,7 @@ class Visitor : CypherBaseVisitor<Any>() {
                 is CypherParser.NodeLabelContext -> labels.add(visitNodeLabel(child) as String)
             }
         }
+        
         return labels
     }
 
@@ -140,27 +194,17 @@ class Visitor : CypherBaseVisitor<Any>() {
     }
 
     override fun visitMatch(ctx: CypherParser.MatchContext): Any? {
-        var optional = false
+        var mode = Mode.MATCH
         lateinit var pattern: CypherParser.PatternContext
         for (child in ctx.children) {
             when (child) {
                 is TerminalNode ->
-                    if ("Optional".equals(child.text, true)) optional = true
+                    if ("Optional".equals(child.text, true)) mode = Mode.OPTIONAL
                 is CypherParser.PatternContext -> pattern = child
             }
         }
 
-        group = if (optional) {
-            Group(Group.Mode.OPTIONAL)
-        } else {
-            normalMatch
-        }
-
-        if (!groups.contains(group)) {
-            groups.add(group)
-        }
-
-        visitPattern(pattern)
+        matches.add(Match(mode, pattern))
 
         return null
     }
@@ -205,14 +249,14 @@ class Visitor : CypherBaseVisitor<Any>() {
 
                     when (prototype.parsingDirection) {
                         Direction.OUTGOING -> {
-                            group.relationships.add(MyRelationship(prototype, start, end, Direction.OUTGOING))
+                            currentGroup.relationships.add(MyRelationship(prototype, start, end, Direction.OUTGOING))
                         }
                         Direction.INCOMING -> {
-                            group.relationships.add(MyRelationship(prototype, start, end, Direction.INCOMING))
+                            currentGroup.relationships.add(MyRelationship(prototype, start, end, Direction.INCOMING))
                         }
                         Direction.BOTH -> {
-                            group.relationships.add(MyRelationship(prototype, start, end, Direction.BOTH))
-                            group.relationships.add(MyRelationship(prototype, end, start, Direction.BOTH))
+                            currentGroup.relationships.add(MyRelationship(prototype, start, end, Direction.BOTH))
+                            currentGroup.relationships.add(MyRelationship(prototype, end, start, Direction.BOTH))
                         }
                     }
                 }
@@ -295,4 +339,8 @@ class Visitor : CypherBaseVisitor<Any>() {
     inner class Variable {
         var content: Any? = null
     }
+
+    data class Match(val mode: Mode, val context: CypherParser.PatternContext)
+
+    class PseudoToken(textPrototype:String, lexer: CypherLexer) : TerminalNodeImpl(lexer.tokenFactory.create(CypherParser.StringLiteral, textPrototype))
 }

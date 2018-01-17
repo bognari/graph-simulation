@@ -9,8 +9,9 @@ import org.neo4j.graphdb.*
 
 class MyRelationship(private val prototype: MyRelationshipPrototype, private val start: MyNode, private val end: MyNode, val direction: Direction) : Entity by prototype, Relationship {
 
+    constructor(other: MyRelationship, start: MyNode, end: MyNode) : this(other.prototype, start, end, other.direction)
+
     init {
-        prototype.relationships.add(this)
         start.addRelationship(this)
         end.addRelationship(this)
     }
