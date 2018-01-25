@@ -40,7 +40,8 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="graph-simulation_main" />
     <orderEntry type="library" name="Gradle: org.antlr:antlr4:4.7.1" level="project" />
-    <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.2.10" level="project" />
+    <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.2.21" level="project" />
+    <orderEntry type="library" name="Gradle: org.jgrapht:jgrapht-core:1.1.0" level="project" />
     <orderEntry type="library" name="Gradle: org.neo4j.test:neo4j-harness:3.3.1" level="project" />
     <orderEntry type="library" name="Gradle: org.neo4j.app:neo4j-server:3.3.1" level="project" />
     <orderEntry type="library" name="Gradle: org.neo4j.app:neo4j-server:tests:3.3.1" level="project" />
@@ -55,8 +56,8 @@
     <orderEntry type="library" name="Gradle: org.abego.treelayout:org.abego.treelayout.core:1.0.3" level="project" />
     <orderEntry type="library" name="Gradle: org.glassfish:javax.json:1.0.4" level="project" />
     <orderEntry type="library" name="Gradle: com.ibm.icu:icu4j:58.2" level="project" />
-    <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.2.10" level="project" />
-    <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib:1.2.10" level="project" />
+    <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.2.21" level="project" />
+    <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib:1.2.21" level="project" />
     <orderEntry type="library" name="Gradle: org.neo4j:neo4j-cypher:3.3.1" level="project" />
     <orderEntry type="library" name="Gradle: org.neo4j:neo4j-consistency-check:3.3.1" level="project" />
     <orderEntry type="library" name="Gradle: org.neo4j:neo4j-security:3.3.1" level="project" />

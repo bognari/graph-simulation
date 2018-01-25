@@ -40,7 +40,7 @@ class MyProcedureTest {
                 
                 // When
                 val result = session.run("""CALL myprocedure.dualSimulation("
-                    match (a)-->(b:Character) Match (b)--(c) Match ()-->(z) OPTIONAL MATCH (a:bla {name:'foobar'}) return a, b, c, z
+                    match (a)-->(b:Character) Match (b)--(c) Match ()-->(z) OPTIONAL MATCH (a:bla {name:'foobar'}) where a.name = 'foobar' return a, b, c, z
                         ", 'test')""")
 
                 val rList = result.asSequence().toList()

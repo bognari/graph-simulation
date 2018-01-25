@@ -57,7 +57,7 @@ class StrongSimulation(private val visitor: Visitor, private val db: GraphDataba
         // for each u \in V_q in Q do
         for (u in group.nodes) {
             // sim(u) := {v | v is in G[w, d_Q] and l_Q(u) = l_G(v)};
-            sim.put(u, sim(u, ball))
+            sim[u] = sim(u, ball)
         }
         
         var hasChanges: Boolean

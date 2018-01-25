@@ -48,7 +48,7 @@ class MyRelationship(private val prototype: MyRelationshipPrototype, private val
         return prototype.types.contains(relationshipType)
     }
 
-    fun typesString() : String {
+    private fun typesString() : String {
         return prototype.types.joinToString("|", prefix = "[", postfix = "]", transform = { it.name() })
     }
 

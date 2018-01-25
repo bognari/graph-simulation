@@ -11,6 +11,7 @@ class MyNode(val group: Group, val variable: String = "") : MyEntity(), Node {
     private val relationshipsIncoming = HashSet<Relationship>()
     private val relationshipsOutgoing = HashSet<Relationship>()
     val labelCtxs = HashSet<CypherParser.NodeLabelsContext>()
+    val whereCtxs = HashSet<CypherParser.WhereContext>()
 
     constructor(group: Group, other: MyNode) : this(group, other.variable) {
         properties.putAll(other.properties)
@@ -174,6 +175,18 @@ class MyNode(val group: Group, val variable: String = "") : MyEntity(), Node {
     fun writeCTXLabel(label : String, visitor: Visitor) {
         for (ctx in labelCtxs) {
             ctx.addChild(Visitor.PseudoToken(label, visitor.lexer))
+        }
+    }
+
+    fun writeCTXWhere(possible : Collection<Node>, visitor: Visitor) {
+        val string = "id($variable) IN ${possible.joinToString(prefix = "[", postfix = "]", transform = { it.id.toString() }, separator = ",")}"
+
+        for (ctx in whereCtxs) {
+            if (ctx.children.size == 1) {
+                ctx.addChild(Visitor.PseudoToken(string, visitor.lexer))
+            } else {
+                ctx.addChild(Visitor.PseudoToken(" AND $string", visitor.lexer))
+            }
         }
     }
 }

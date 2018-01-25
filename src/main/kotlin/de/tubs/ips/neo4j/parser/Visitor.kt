@@ -16,7 +16,7 @@ import org.neo4j.graphdb.Entity
 import org.neo4j.graphdb.Label
 import org.neo4j.graphdb.Node
 
-class Visitor(val lexer : CypherLexer, val ctx : CypherParser.CypherContext) : CypherBaseVisitor<Any>() {
+class Visitor(val lexer: CypherLexer, private val ctx: CypherParser.CypherContext) : CypherBaseVisitor<Any>() {
 
     companion object {
         fun setupVisitor(pattern: String): Visitor {
@@ -26,7 +26,7 @@ class Visitor(val lexer : CypherLexer, val ctx : CypherParser.CypherContext) : C
             val context = parser.cypher()
             val visitor = Visitor(lexer, context)
             visitor.visit(context)
-            
+
             return visitor
         }
     }
@@ -35,49 +35,21 @@ class Visitor(val lexer : CypherLexer, val ctx : CypherParser.CypherContext) : C
         TYPES, VARIABLE, PROPERTIES, RANGES
     }
 
-    val variables: MutableMap<String, Variable> = HashMap()
-    val groups: MutableList<Group> = ArrayList()
-    private val normalMatch: Group = Group()
-    private var currentGroup = normalMatch
-
-    
-    private val matches = ArrayList<Match>()
+    val groups = HashSet<Group>()
+    private lateinit var normalMatch : Group
+    private lateinit var currentGroup : Group
+    private lateinit var whereContext: CypherParser.WhereContext
 
     enum class Mode {
         MATCH, OPTIONAL
     }
 
-    fun prettyPrint(): String  {
+    fun prettyPrint(): String {
         val pp = PrettyPrinter()
         pp.visit(ctx)
         return pp.text.toString()
     }
-
-    override fun visitCypher(ctx: CypherParser.CypherContext?): Any? {
-        super.visitCypher(ctx)
-
-        computeMatches()
-
-        return null
-    }
-
-    private fun computeMatches() {
-
-        if (matches.any { it.mode == Mode.MATCH }) {
-            groups.add(currentGroup)
-        }
-
-        for (match in matches.filter { it.mode == Mode.MATCH }) {
-            visitPattern(match.context)
-        }
-
-        for (match in matches.filter { it.mode == Mode.OPTIONAL }) {
-            currentGroup = Group(normalMatch)
-            groups.add(currentGroup)
-            visitPattern(match.context)
-        }
-    }
-
+    
     @Suppress("UNCHECKED_CAST")
     override fun visitNodePattern(ctx: CypherParser.NodePatternContext): Node {
         var variable: String? = null
@@ -112,6 +84,7 @@ class Visitor(val lexer : CypherLexer, val ctx : CypherParser.CypherContext) : C
         val node = currentGroup.nodesDirectory.getOrPut(variable, { MyNode(currentGroup, variable) })
 
         node.labelCtxs.add(labelsContext)
+        node.whereCtxs.add(whereContext)
 
         currentGroup.nodes.add(node)
 
@@ -120,8 +93,8 @@ class Visitor(val lexer : CypherLexer, val ctx : CypherParser.CypherContext) : C
                 node.addLabel(Label.label(label))
             }
         }
-        
-        currentGroup.nodesDirectory.put(variable, node)
+
+        currentGroup.nodesDirectory[variable] = node
 
 
         if (properties != null) {
@@ -129,6 +102,11 @@ class Visitor(val lexer : CypherLexer, val ctx : CypherParser.CypherContext) : C
         }
 
         return node
+    }
+
+    override fun visitSingleQuery(ctx: CypherParser.SingleQueryContext?): Any {
+        normalMatch = Group()
+        return super.visitSingleQuery(ctx)
     }
 
     override fun visitNodeLabels(ctx: CypherParser.NodeLabelsContext): List<String> {
@@ -139,7 +117,7 @@ class Visitor(val lexer : CypherLexer, val ctx : CypherParser.CypherContext) : C
                 is CypherParser.NodeLabelContext -> labels.add(visitNodeLabel(child) as String)
             }
         }
-        
+
         return labels
     }
 
@@ -158,7 +136,7 @@ class Visitor(val lexer : CypherLexer, val ctx : CypherParser.CypherContext) : C
         var i = 0
         while (i < list.size) {
             if (list[i] != null && list[i + 1] != null) {
-                ret.put(list[i] as String, list[i + 1] as Any)
+                ret[list[i] as String] = list[i + 1] as Any
                 i += 2
             }
         }
@@ -196,21 +174,40 @@ class Visitor(val lexer : CypherLexer, val ctx : CypherParser.CypherContext) : C
     override fun visitMatch(ctx: CypherParser.MatchContext): Any? {
         var mode = Mode.MATCH
         lateinit var pattern: CypherParser.PatternContext
+        var where: CypherParser.WhereContext? = null
+
         for (child in ctx.children) {
             when (child) {
                 is TerminalNode ->
                     if ("Optional".equals(child.text, true)) mode = Mode.OPTIONAL
                 is CypherParser.PatternContext -> pattern = child
+                is CypherParser.WhereContext -> where = child
             }
         }
 
-        matches.add(Match(mode, pattern))
+        currentGroup = if (mode == Mode.MATCH) {
+            normalMatch
+        } else {
+            Group(normalMatch)
+        }
 
+        groups.add(currentGroup)
+
+
+        if (where == null) {
+            where = CypherParser.WhereContext(ctx, 0)
+            where.addChild(PseudoToken(" WHERE ", lexer))
+            ctx.addChild(where)
+        } else {
+            where.children.add(2, PseudoToken("(", lexer))
+            where.addChild(PseudoToken(")", lexer))
+        }
+
+        whereContext = where
+
+        visitPattern(pattern)
+        
         return null
-    }
-
-    override fun visitParameter(ctx: CypherParser.ParameterContext): Variable {
-        return variables.getOrPut(ctx.text, { Variable() })
     }
 
     override fun visitVariable(ctx: CypherParser.VariableContext): String {
@@ -314,10 +311,10 @@ class Visitor(val lexer : CypherLexer, val ctx : CypherParser.CypherContext) : C
 
         for (child in ctx.children) {
             when (child) {
-                is CypherParser.VariableContext -> values.put(DetailConstants.VARIABLE, visitVariable(child))
-                is CypherParser.RelationshipTypesContext -> values.put(DetailConstants.TYPES, visitRelationshipTypes(child))
-                is CypherParser.RangeLiteralContext -> values.put(DetailConstants.RANGES, visitRangeLiteral(child))
-                is CypherParser.PropertiesContext -> values.put(DetailConstants.PROPERTIES, visitProperties(child))
+                is CypherParser.VariableContext -> values[DetailConstants.VARIABLE] = visitVariable(child)
+                is CypherParser.RelationshipTypesContext -> values[DetailConstants.TYPES] = visitRelationshipTypes(child)
+                is CypherParser.RangeLiteralContext -> values[DetailConstants.RANGES] = visitRangeLiteral(child)
+                is CypherParser.PropertiesContext -> values[DetailConstants.PROPERTIES] = visitProperties(child)
             }
         }
 
@@ -336,11 +333,5 @@ class Visitor(val lexer : CypherLexer, val ctx : CypherParser.CypherContext) : C
         return types
     }
 
-    inner class Variable {
-        var content: Any? = null
-    }
-
-    data class Match(val mode: Mode, val context: CypherParser.PatternContext)
-
-    class PseudoToken(textPrototype:String, lexer: CypherLexer) : TerminalNodeImpl(lexer.tokenFactory.create(CypherParser.StringLiteral, textPrototype))
+    class PseudoToken(textPrototype: String, lexer: CypherLexer) : TerminalNodeImpl(lexer.tokenFactory.create(CypherParser.StringLiteral, textPrototype))
 }

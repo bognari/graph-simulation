@@ -3,7 +3,7 @@ package de.tubs.ips.neo4j.graph
 import org.neo4j.graphdb.Entity
 import org.neo4j.graphdb.GraphDatabaseService
 
-abstract class MyEntity() : Entity {
+abstract class MyEntity : Entity {
     protected val properties: MutableMap<String, Any> = HashMap()
 
     override fun getId(): Long {

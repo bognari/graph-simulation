@@ -44,38 +44,16 @@ class MyProcedure {
         val simulation = StrongSimulation(visitor, db!!)
         val result = simulation.dualSimulation()
 
-        writeLabels(result)
+        //writeLabels(result)
 
         val query = rewriteQuery(result, visitor)
         val ret = db!!.execute(query)
 
-        val retList = ret.asSequence().toList()
+        val retList = ret.asSequence().map { Output(it) }.toList()
 
-        removeLabels(result)
+        //removeLabels(result)
 
-        /*val ret_1 = ret.asSequence().toList()
-
-        val ret_0 = db!!.execute(pattern).asSequence().toList()
-        
-        val ret_a = db!!.execute("match (a:g0_a) return a").asSequence().toList()
-        val ret_b = db!!.execute("match (b:g0_b) return b").asSequence().toList()
-        val ret_c = db!!.execute("match (c:g0_c) return c").asSequence().toList()
-
-
-        val labels = db!!.allLabels
-
-        val listLabels = ArrayList<Label>()
-        listLabels.addAll(labels)
-
-
-
-        val statistics = ret.queryStatistics
-
-        val colums = ret.columns()
-        */
-
-
-        return retList.stream().map { Output(it) }
+        return retList.stream()
     }
 
     private fun writeLabels(result: Map<Group, Map<MyNode, Set<Node>>>) {
@@ -107,11 +85,12 @@ class MyProcedure {
 
     private fun rewriteQuery(result: Map<Group, Map<MyNode, Set<Node>>>, visitor: Visitor): String {
         for ((group, map) in result) {
-            for ((node, _) in map) {
-                if (node.variable.isNotBlank()) {
-                    val label = genLabelString(group, node)
-                    node.writeCTXLabel(":$label", visitor)
-                }
+            for ((node, possible) in map) {
+                //if (node.variable.isNotBlank()) {
+                    //val label = genLabelString(group, node)
+                    //node.writeCTXLabel(":$label", visitor)
+                    node.writeCTXWhere(possible, visitor)
+                //}
             }
         }
 
@@ -122,6 +101,5 @@ class MyProcedure {
         return "g${group.number}_${node.variable}"
     }
 
-    class Output(@JvmField
-                 public var content: Map<String, Any>) {}
+    class Output(@JvmField var content: Map<String, Any>)
 }
