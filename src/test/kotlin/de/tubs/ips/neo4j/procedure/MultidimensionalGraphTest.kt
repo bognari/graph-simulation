@@ -159,39 +159,63 @@ ORDER BY d1, d2""").map { it.replace("\n", " ") }.map { it.replace("\"", "'") }
             driver.close()
         }
 
+        @JvmStatic
         private lateinit var driver: Driver
     }
 
     @Test
     fun test() {
-
         val visitor = Visitor.setupVisitor(query!!)
 
-        GraphDatabase.driver(neo4j.boltURI(), Config.build().withoutEncryption().toConfig()).use({ driver ->
-            driver.session().use({ session ->
-                val q1 = "CALL myprocedure.dualSimulationID(\"$query\")"
-                val q2 = "CALL myprocedure.strongSimulationID(\"$query\")"
-                val q3 = "CALL myprocedure.dualSimulationLabel(\"$query\")"
-                val q4 = "CALL myprocedure.strongSimulationLabel(\"$query\")"
+        driver.session().use({ session ->
+            val q1 = "CALL myprocedure.dualSimulationID(\"$query\")"
+            val q2 = "CALL myprocedure.strongSimulationID(\"$query\")"
+            val q3 = "CALL myprocedure.dualSimulationLabel(\"$query\")"
+            val q4 = "CALL myprocedure.strongSimulationLabel(\"$query\")"
 
-                val result = session.run(query).asSequence().toList()
-                val r1 = session.run(q1).asSequence().map { it["content"] as MapValue }.map { it.asMap() }.toList()
-                val r2 = session.run(q2).asSequence().map { it["content"] as MapValue }.map { it.asMap() }.toList()
-                val r3 = session.run(q3).asSequence().map { it["content"] as MapValue }.map { it.asMap() }.toList()
-                val r4 = session.run(q4).asSequence().map { it["content"] as MapValue }.map { it.asMap() }.toList()
+            val result = session.run(query).asSequence().toList()
+            val r1 = session.run(q1).asSequence().map { it["content"] as MapValue }.map { it.asMap() }.toList()
+            val r2 = session.run(q2).asSequence().map { it["content"] as MapValue }.map { it.asMap() }.toList()
 
-                //testResultsUnordered(result, r1)
-                //testResultsUnordered(result, r2)
-                //testResultsUnordered(result, r3)
-                //testResultsUnordered(result, r4)
+            testResults(result, r1)
+            testResults(result, r2)
 
-                testResults(result, r1)
-                testResults(result, r2)
-                //testResults(result, r3)
-                //testResults(result, r4)
+            println()
+        })
+    }
 
-                println()
-            })
+    @Test
+    fun normal() {
+        driver.session().use({ session ->
+            val result = session.run(query).asSequence().toList()
+        })
+    }
+
+    @Test
+    fun dualSimulationID() {
+        driver.session().use({ session ->
+            val result = session.run("CALL myprocedure.dualSimulationID(\"$query\")").asSequence().toList()
+        })
+    }
+
+    @Test
+    fun strongSimulationID() {
+        driver.session().use({ session ->
+            val result = session.run("CALL myprocedure.strongSimulationID(\"$query\")").asSequence().toList()
+        })
+    }
+
+    @Test
+    fun dualSimulationLabel() {
+        driver.session().use({ session ->
+            val result = session.run("CALL myprocedure.dualSimulationLabel(\"$query\")").asSequence().toList()
+        })
+    }
+
+    @Test
+    fun strongSimulationLabel() {
+        driver.session().use({ session ->
+            val result = session.run("CALL myprocedure.strongSimulationLabel(\"$query\")").asSequence().toList()
         })
     }
 }
