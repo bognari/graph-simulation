@@ -1,15 +1,17 @@
 package de.tubs.ips.neo4j.graph
 
+import de.tubs.ips.neo4j.grammar.CypherParser
 import org.jgrapht.alg.shortestpath.GraphMeasurer
 import org.jgrapht.graph.SimpleGraph
 
 class Group {
 
     private val mode : String
-    val nodesDirectory: MutableMap<String, MyNode> = HashMap()
-    val nodes: MutableSet<MyNode> = HashSet()
-    val relationships: MutableSet<MyRelationship> = HashSet()
+    val nodesDirectory: MutableMap<String, MyNode> = LinkedHashMap()
+    val nodes: MutableSet<MyNode> = LinkedHashSet()
+    val relationships: MutableSet<MyRelationship> = LinkedHashSet()
     val number: Int
+    val inGroup = HashSet<MyNode>()
 
     companion object {
         internal var number = 0
@@ -26,7 +28,7 @@ class Group {
     /**
      * Unconnected anonymous nodes are not copied
      */
-    constructor(other: Group) {
+    constructor(other: Group, whereContext: CypherParser.WhereContext) {
         mode = "OPTIONAL"
 
         for ((key, othernode) in other.nodesDirectory) {
@@ -45,6 +47,10 @@ class Group {
             nodes.add(end)
 
             relationships.add(MyRelationship(relationship, start, end))
+        }
+
+        for (node in nodes) {
+            node.whereCtx = whereContext
         }
     }
 

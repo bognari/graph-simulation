@@ -9,7 +9,7 @@ import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.graphdb.Node
 
 
-class StrongSimulation(private val visitor: Visitor, private val db: GraphDatabaseService) {
+class Simulation(private val visitor: Visitor, private val db: GraphDatabaseService) {
 
     fun dualSimulation(): Map<Group, Map<MyNode, Set<Node>>> {
         val ball = Neo4JWrapper(db)

@@ -11,13 +11,13 @@ class MyNode(val group: Group, val variable: String = "") : MyEntity(), Node {
     private val relationshipsIncoming = HashSet<Relationship>()
     private val relationshipsOutgoing = HashSet<Relationship>()
     val labelCtxs = HashSet<CypherParser.NodeLabelsContext>()
-    val whereCtxs = HashSet<CypherParser.WhereContext>()
+    lateinit var whereCtx: CypherParser.WhereContext
 
     constructor(group: Group, other: MyNode) : this(group, other.variable) {
         properties.putAll(other.properties)
         labels.addAll(other.labels)
     }
-    
+
     override fun delete() {
         throw UnsupportedOperationException()
     }
@@ -172,20 +172,19 @@ class MyNode(val group: Group, val variable: String = "") : MyEntity(), Node {
         return matchLabels(other) && matchProperties(other)
     }
 
-    fun writeCTXLabel(label : String, visitor: Visitor) {
+    fun writeCTXLabel(label: String, visitor: Visitor) {
         for (ctx in labelCtxs) {
             ctx.addChild(Visitor.PseudoToken(label, visitor.lexer))
         }
     }
 
-    fun writeCTXWhere(possible : Collection<Node>, visitor: Visitor) {
+    fun writeCTXWhere(possible: Collection<Node>, visitor: Visitor) {
         val string = "id($variable) IN ${possible.joinToString(prefix = "[", postfix = "]", transform = { it.id.toString() }, separator = ",")}"
-
-        for (ctx in whereCtxs) {
-            if (ctx.children.size == 1) {
-                ctx.addChild(Visitor.PseudoToken(string, visitor.lexer))
+        if (group.inGroup.contains(this)) {
+            if (whereCtx.children.size == 1) {
+                whereCtx.addChild(Visitor.PseudoToken(string, visitor.lexer))
             } else {
-                ctx.addChild(Visitor.PseudoToken(" AND $string", visitor.lexer))
+                whereCtx.addChild(Visitor.PseudoToken(" AND $string", visitor.lexer))
             }
         }
     }

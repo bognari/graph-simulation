@@ -16,7 +16,7 @@ import org.neo4j.graphdb.Entity
 import org.neo4j.graphdb.Label
 import org.neo4j.graphdb.Node
 
-class Visitor(val lexer: CypherLexer, private val ctx: CypherParser.CypherContext) : CypherBaseVisitor<Any>() {
+class Visitor internal constructor(val lexer: CypherLexer, private val ctx: CypherParser.CypherContext) : CypherBaseVisitor<Any>() {
 
     companion object {
         fun setupVisitor(pattern: String): Visitor {
@@ -35,10 +35,11 @@ class Visitor(val lexer: CypherLexer, private val ctx: CypherParser.CypherContex
         TYPES, VARIABLE, PROPERTIES, RANGES
     }
 
-    val groups = HashSet<Group>()
-    private lateinit var normalMatch : Group
-    private lateinit var currentGroup : Group
+    val groups = ArrayList<Group>()
+    private lateinit var normalMatch: Group
+    private lateinit var currentGroup: Group
     private lateinit var whereContext: CypherParser.WhereContext
+
 
     enum class Mode {
         MATCH, OPTIONAL
@@ -49,7 +50,7 @@ class Visitor(val lexer: CypherLexer, private val ctx: CypherParser.CypherContex
         pp.visit(ctx)
         return pp.text.toString()
     }
-    
+
     @Suppress("UNCHECKED_CAST")
     override fun visitNodePattern(ctx: CypherParser.NodePatternContext): Node {
         var variable: String? = null
@@ -84,9 +85,10 @@ class Visitor(val lexer: CypherLexer, private val ctx: CypherParser.CypherContex
         val node = currentGroup.nodesDirectory.getOrPut(variable, { MyNode(currentGroup, variable) })
 
         node.labelCtxs.add(labelsContext)
-        node.whereCtxs.add(whereContext)
+        node.whereCtx = whereContext
 
         currentGroup.nodes.add(node)
+        currentGroup.inGroup.add(node)
 
         if (labels != null) {
             for (label in labels) {
@@ -104,7 +106,7 @@ class Visitor(val lexer: CypherLexer, private val ctx: CypherParser.CypherContex
         return node
     }
 
-    override fun visitSingleQuery(ctx: CypherParser.SingleQueryContext?): Any {
+    override fun visitSingleQuery(ctx: CypherParser.SingleQueryContext): Any? {
         normalMatch = Group()
         return super.visitSingleQuery(ctx)
     }
@@ -166,7 +168,7 @@ class Visitor(val lexer: CypherLexer, private val ctx: CypherParser.CypherContex
         return when {
             value.startsWith("0x") -> value.substring(2).toInt(16)
             value.startsWith("0b") -> value.substring(2).toInt(2)
-            value.startsWith("0") -> value.substring(1).toInt(8)
+            value.startsWith("0") && value.length > 1 -> value.substring(1).toInt(8)
             else -> value.toInt()
         }
     }
@@ -185,15 +187,6 @@ class Visitor(val lexer: CypherLexer, private val ctx: CypherParser.CypherContex
             }
         }
 
-        currentGroup = if (mode == Mode.MATCH) {
-            normalMatch
-        } else {
-            Group(normalMatch)
-        }
-
-        groups.add(currentGroup)
-
-
         if (where == null) {
             where = CypherParser.WhereContext(ctx, 0)
             where.addChild(PseudoToken(" WHERE ", lexer))
@@ -205,8 +198,18 @@ class Visitor(val lexer: CypherLexer, private val ctx: CypherParser.CypherContex
 
         whereContext = where
 
+        currentGroup = if (mode == Mode.MATCH) {
+            normalMatch
+        } else {
+            Group(normalMatch, whereContext)
+        }
+
+        if (!groups.contains(currentGroup)) {
+            groups.add(currentGroup)
+        }
+
         visitPattern(pattern)
-        
+
         return null
     }
 
@@ -249,7 +252,8 @@ class Visitor(val lexer: CypherLexer, private val ctx: CypherParser.CypherContex
                             currentGroup.relationships.add(MyRelationship(prototype, start, end, Direction.OUTGOING))
                         }
                         Direction.INCOMING -> {
-                            currentGroup.relationships.add(MyRelationship(prototype, start, end, Direction.INCOMING))
+                            //currentGroup.relationships.add(MyRelationship(prototype, start, end, Direction.INCOMING))
+                            currentGroup.relationships.add(MyRelationship(prototype, end, start, Direction.OUTGOING))
                         }
                         Direction.BOTH -> {
                             currentGroup.relationships.add(MyRelationship(prototype, start, end, Direction.BOTH))

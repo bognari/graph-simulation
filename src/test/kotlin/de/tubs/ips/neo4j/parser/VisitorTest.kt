@@ -1,8 +1,10 @@
 package de.tubs.ips.neo4j.parser
 
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
 
 class VisitorTest {
-   /*
     @Test
     @Throws(Throwable::class)
     fun statement1() {
@@ -13,7 +15,7 @@ class VisitorTest {
 
         assertEquals(1, visitor.groups.size)
 
-        assertEquals("Group(mode=OPTIONAL, nodesDirectory={yourFriends=(<yourFriends> no labels <1|1|0>), you=(<you> no labels <1|0|1>)}, relationshipsDirectory={}, nodes=[(<you> no labels <1|0|1>), (<yourFriends> no labels <1|1|0>)], relationships=[(<you> no labels <1|0|1>) -[FRIEND]-> (<yourFriends> no labels <1|1|0>) <OUTGOING>])", visitor.groups[0].toString())
+        assertEquals("Group<1>(mode=OPTIONAL, diameter=1, nodesDirectory={you=(you  <1|0|1>), yourFriends=(yourFriends  <1|1|0>)}, nodes=[(you  <1|0|1>), (yourFriends  <1|1|0>)], relationships=[(you  <1|0|1>) -[FRIEND]-> (yourFriends  <1|1|0>) <OUTGOING>])", visitor.groups[0].toString())
 
     }
 
@@ -65,7 +67,7 @@ class VisitorTest {
         
         assertEquals(visitor.groups.size, 1)
 
-        assertEquals("Group(mode=MATCH, nodesDirectory={p=(<p> Product <1|1|0>), c=(<c> Customer <1|0|1>)}, relationshipsDirectory={}, nodes=[(<p> Product <1|1|0>), (Order <2|1|1>), (<c> Customer <1|0|1>)], relationships=[(<p> Product <1|1|0>) <-[PRODUCT]- (Order <2|1|1>) <INCOMING>, (Order <2|1|1>) <-[PURCHASED]- (<c> Customer <1|0|1>) <INCOMING>])", visitor.groups[0].toString())
+        assertEquals("Group<4>(mode=MATCH, diameter=2, nodesDirectory={p=(p [Product] <1|1|0>), g4n1=(g4n1 [Order] <2|1|1>), c=(c [Customer] <1|0|1>)}, nodes=[(p [Product] <1|1|0>), (g4n1 [Order] <2|1|1>), (c [Customer] <1|0|1>)], relationships=[(p [Product] <1|1|0>) <-[PRODUCT]- (g4n1 [Order] <2|1|1>) <INCOMING>, (g4n1 [Order] <2|1|1>) <-[PURCHASED]- (c [Customer] <1|0|1>) <INCOMING>])", visitor.groups[0].toString())
     }
 
     @Test
@@ -226,5 +228,4 @@ RETURN DISTINCT t_suite.name AS `Test Suite`, t_case.name AS `Test CASE`;"""
 
         assertEquals("Group(mode=MATCH, nodesDirectory={t_case=(<t_case> TestCase <1|1|1>), feature=(<feature> no labels <1|1|1>), t_suite=(<t_suite> TestSuite <2|2|2>)}, relationshipsDirectory={}, nodes=[(<t_case> TestCase <1|1|1>), (<t_suite> TestSuite <2|2|2>), (<feature> no labels <1|1|1>)], relationships=[(<t_case> TestCase <1|1|1>) -[]- (<t_suite> TestSuite <2|2|2>) <null>, (<t_suite> TestSuite <2|2|2>) -[]- (<feature> no labels <1|1|1>) <null>])", visitor.groups[4].toString())
     }
-    */
 }
