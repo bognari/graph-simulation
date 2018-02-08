@@ -95,25 +95,30 @@ class MyProcedure {
     }
 
     private fun writeLabels(result: Map<Group, Map<MyNode, Set<Node>>>) {
-        for ((group, map) in result) {
-            for ((node, list) in map) {
-                val label = genLabelString(group, node)
-                for (possibleNode in list) {
-                    possibleNode.addLabel(Label.label(label))
+        db!!.beginTx().use {
+            for ((group, map) in result) {
+                for ((node, list) in map) {
+                    val label = genLabelString(group, node)
+                    for (possibleNode in list) {
+                        possibleNode.addLabel(Label.label(label))
+                    }
                 }
             }
+            it.success()
         }
     }
 
     private fun removeLabels(result: Map<Group, Map<MyNode, Set<Node>>>) {
-        for ((group, map) in result) {
-            for ((node, list) in map) {
-                val label = genLabelString(group, node)
-                for (possibleNode in list) {
-                    possibleNode.removeLabel(Label.label(label))
+        db!!.beginTx().use {
+            for ((group, map) in result) {
+                for ((node, list) in map) {
+                    val label = genLabelString(group, node)
+                    for (possibleNode in list) {
+                        possibleNode.removeLabel(Label.label(label))
+                    }
                 }
-
             }
+            it.success()
         }
     }
 
@@ -123,7 +128,6 @@ class MyProcedure {
                 node.writeCTXWhere(possible, visitor)
             }
         }
-
         return visitor.prettyPrint()
     }
 
@@ -137,7 +141,6 @@ class MyProcedure {
                 }
             }
         }
-
         return visitor.prettyPrint()
     }
 

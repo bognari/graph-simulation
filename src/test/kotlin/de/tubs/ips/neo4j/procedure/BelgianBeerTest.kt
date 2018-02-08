@@ -22,7 +22,7 @@ class BelgianBeerTest {
     companion object {
         @ClassRule
         @JvmField
-        var neo4j: Neo4jRule = Neo4jRule().withProcedure(MyProcedure::class.java)
+        var neo4j: Neo4jRule = Neo4jRule().withConfig("dbms.security.procedures.unrestricted", "*").withProcedure(MyProcedure::class.java)
 
         @Parameterized.Parameters(name = "<{index}> {0}")
         @JvmStatic

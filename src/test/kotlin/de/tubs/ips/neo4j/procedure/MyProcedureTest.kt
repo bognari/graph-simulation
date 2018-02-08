@@ -1,12 +1,11 @@
 package de.tubs.ips.neo4j.procedure
 
+import de.tubs.ips.neo4j.parser.Visitor
 import org.junit.Rule
 import org.junit.Test
 import org.neo4j.driver.v1.Config
 import org.neo4j.driver.v1.GraphDatabase
 import org.neo4j.harness.junit.Neo4jRule
-import java.nio.file.Files
-import java.nio.file.Paths
 
 
 class MyProcedureTest {
@@ -23,7 +22,7 @@ class MyProcedureTest {
             driver.session().use({ session ->
                 // Given
 
-                val lines = Files.readAllLines(Paths.get("src", "test", "resources", "himym2.cql"))
+                /*val lines = Files.readAllLines(Paths.get("src", "test", "resources", "himym2.cql"))
                 val content = lines.joinToString("\n")
                 val statements = content.split(";".toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray()
 
@@ -37,11 +36,12 @@ class MyProcedureTest {
 
 
                 println(session.run("Match (a:Character) RETURN count(a)").next())
-                
+                */
                 // When
-                val result = session.run("""CALL myprocedure.dualSimulation("
-                    match (a)-->(b:Character) Match (b)--(c) Match ()-->(z) OPTIONAL MATCH (a:bla {name:'foobar'}) where a.name = 'foobar' return a, b, c, z
-                        ", 'test')""")
+                val result = session.run("""CALL myprocedure.dualSimulationID("
+                    MATCH (x:FullProfessor)-[:worksFor]-({id: 'http://www.Department0.University12.edu'}) OPTIONAL MATCH (y)-[:advisor]-(x), (x)-[:teacherOf]-(x), (y)-[:takesCourse]-(z) RETURN x, y, z;
+
+                        ")""")
 
                 val rList = result.asSequence().toList()
 
@@ -50,5 +50,14 @@ class MyProcedureTest {
                 // Then
             })
         })
+    }
+
+    @Test
+    @Throws(Throwable::class)
+    fun ast() {
+        val v = Visitor.setupVisitor("""
+                    MATCH (x:FullProfessor)-[:worksFor]-({id: 'http://www.Department0.University12.edu'}) OPTIONAL MATCH (y)-[:advisor]-(x), (x)-[:teacherOf]-(x), (y)-[:takesCourse]-(z) RETURN x, y, z;
+""")
+        println()
     }
 }

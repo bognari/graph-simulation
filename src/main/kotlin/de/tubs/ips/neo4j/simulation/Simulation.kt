@@ -7,27 +7,50 @@ import de.tubs.ips.neo4j.parser.Visitor
 import org.neo4j.graphdb.Direction
 import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.graphdb.Node
+import java.util.stream.Collectors
 
 
 class Simulation(private val visitor: Visitor, private val db: GraphDatabaseService) {
 
+    enum class Mode {
+        NORMAL, SHARED, PARALLEL
+    }
+
+    private val lazySim: Map<Group, MutableMap<MyNode, MutableSet<Node>>> by lazy {
+        val ret = HashMap<Group, HashMap<MyNode, MutableSet<Node>>>()
+
+        for (n in db.allNodes) {
+            for (g in visitor.groups) {
+                g.nodes
+                        .filter { it.match(n) }
+                        .forEach { ret.getOrPut(g, { HashMap() }).getOrPut(it, { HashSet() }).add(n) }
+            }
+        }
+        ret
+    }
+
     fun dualSimulation(): Map<Group, Map<MyNode, Set<Node>>> {
         val ball = Neo4JWrapper(db)
         val result = HashMap<Group, Map<MyNode, Set<Node>>>()
-        for (group in visitor.groups) {
-            result[group] = dualSim(ball, group)
+
+        val sims = visitor.groups.parallelStream().map { Pair(it, dualSim(ball, it, Mode.PARALLEL)) }.collect(Collectors.toList())
+
+        for (sim in sims) {
+            result[sim.first] = sim.second
         }
+
         return result
     }
 
     fun strongSimulation(): Map<Group, Map<MyNode, Set<Node>>> {
         val result = HashMap<Group, Map<MyNode, Set<Node>>>()
 
-        for (group in visitor.groups) {
+        // valid optimization because ball creation is extremely expensive
+        val max = visitor.groups.maxBy { it.diameter }!!.diameter
+        val balls = Ball.createBalls(db.allNodes, max, db)
 
-            val s_ws = Ball.createBalls(db.allNodes, group.diameter)
-                    .map { extractMaxPG(it, dualSim(it, group)) }
-                    .filterNotNull()
+        for (group in visitor.groups) {
+            val s_ws = balls.mapNotNull { extractMaxPG(it, dualSim(it, group)) }
                     .map { it.entries }
                     .toList()
 
@@ -51,51 +74,73 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
         return if (s_w.entries.any { it.value.contains(w) }) s_w else null
     }
 
-    private fun dualSim(ball: IDB, group: Group): Map<MyNode, Set<Node>> {
-        val sim = HashMap<MyNode, MutableSet<Node>>()
+    private fun dualSim(ball: IDB, group: Group, mode: Mode = Mode.NORMAL): Map<MyNode, Set<Node>> {
+        val sim = when (mode) {
+            Mode.SHARED -> lazySim[group]!!
+            Mode.PARALLEL -> {
 
-        // for each u \in V_q in Q do
-        for (u in group.nodes) {
-            // sim(u) := {v | v is in G[w, d_Q] and l_Q(u) = l_G(v)};
-            sim[u] = sim(u, ball)
+                val ret = HashMap<MyNode, MutableSet<Node>>()
+
+                val sims = group.nodes.parallelStream().map { Pair(it, sim(it, ball)) }.collect(Collectors.toList())
+
+                for (sim in sims) {
+                    ret[sim.first] = sim.second
+                }
+
+                ret
+            }
+            else -> {
+                val ret = HashMap<MyNode, MutableSet<Node>>()
+
+                // for each u \in V_q in Q do
+                for (u in group.nodes) {
+                    // sim(u) := {v | v is in G[w, d_Q] and l_Q(u) = l_G(v)};
+                    ret[u] = sim(u, ball)
+                }
+                ret
+            }
         }
-        
-        var hasChanges: Boolean
 
-        // while there are changes do
-        do {
-            hasChanges = false
+        db.beginTx().use {
 
-            // for each edge (u, u') in E_Q
-            for (relationship in group.relationships) {
-                // and each node v \in sim(u) do
-                // if there is no edge (v, v') in G[w, d_Q] with v' \in sim(u') then
+            var hasChanges: Boolean
 
-                val u = relationship.startNode
-                val u_ = relationship.endNode
+            // while there are changes do
+            do {
+                hasChanges = false
 
-                hasChanges = hasChanges or innerLoop(u, u_, ball, sim, Direction.OUTGOING, relationship)
-            }
+                // for each edge (u, u') in E_Q
+                for (relationship in group.relationships) {
+                    // and each node v \in sim(u) do
+                    // if there is no edge (v, v') in G[w, d_Q] with v' \in sim(u') then
 
-            // for each edge (u', u) in E_Q
-            for (relationship in group.relationships) {
-                // and each node v \in sim(u) do
-                // if there is no edge (v', v) in G[w, d_Q] with v' \in sim(u') then
+                    val u = relationship.startNode
+                    val u_ = relationship.endNode
 
-                val u_ = relationship.startNode
-                val u = relationship.endNode
+                    hasChanges = hasChanges or innerLoop(u, u_, sim, Direction.OUTGOING, relationship)
+                }
 
-                hasChanges = hasChanges or innerLoop(u, u_, ball, sim, Direction.INCOMING, relationship)
-            }
+                // for each edge (u', u) in E_Q
+                for (relationship in group.relationships) {
+                    // and each node v \in sim(u) do
+                    // if there is no edge (v', v) in G[w, d_Q] with v' \in sim(u') then
 
-            // if sim(u) = {} then return {} ?!
+                    val u_ = relationship.startNode
+                    val u = relationship.endNode
 
-        } while (hasChanges)
+                    hasChanges = hasChanges or innerLoop(u, u_, sim, Direction.INCOMING, relationship)
+                }
+
+                // if sim(u) = {} then return {} ?!
+
+            } while (hasChanges)
+            it.success()
+        }
 
         return sim
     }
 
-    private fun innerLoop(u: MyNode, u_: MyNode, ball: IDB, sim: MutableMap<MyNode, MutableSet<Node>>, direction: Direction, relationship: MyRelationship): Boolean {
+    private fun innerLoop(u: MyNode, u_: MyNode, sim: MutableMap<MyNode, MutableSet<Node>>, direction: Direction, relationship: MyRelationship): Boolean {
         var hasChanges = false
 
         val sim_u = sim[u] ?: return false
@@ -107,7 +152,7 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
             val v = iterator.next()
 
             // if there is no edge (v, v') in G[w, d_Q] with v' \in sim(u') then
-            if (!edgeIn(v, ball, sim[u_], direction, relationship)) {
+            if (!edgeIn(v, sim[u_], direction, relationship)) {
                 // sim(u) := sim(u) \ {v};
                 iterator.remove()
                 hasChanges = true
@@ -118,7 +163,7 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
     }
 
     // if there is a edge (v, v') in G[w, d_Q] with v' \in sim(u')
-    private fun edgeIn(v: Node, ball: IDB, sim_u_: MutableSet<Node>?, direction: Direction, relationship: MyRelationship): Boolean {
+    private fun edgeIn(v: Node, sim_u_: MutableSet<Node>?, direction: Direction, relationship: MyRelationship): Boolean {
         if (sim_u_ == null || sim_u_.isEmpty()) {
             return false
         }
@@ -132,16 +177,28 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
 
         return relationships
                 .filter { relationship.match(it) }
-                //.filter { ball.getRelationships().contains(it) }
                 .map { it.getOtherNode(v) }
                 .any { sim_u_.contains(it) }
     }
 
     private fun sim(u: MyNode, ball: IDB): MutableSet<Node> {
-        val ret = HashSet<Node>()
-
-        ball.getNodes().filterTo(ret) { u.match(it) }
-
-        return ret
+        db.beginTx().use {
+            val ret = if (ball is Neo4JWrapper) {
+                ball.getNodes().stream().parallel().filter({
+                    val node = it // ugly as hell... </3 neo4j
+                    var b = false
+                    db.beginTx().use {
+                        b = u.match(node)
+                        it.success()
+                    }
+                    b
+                }).collect(Collectors.toSet()) as MutableSet<Node>
+            } else {
+                val tmp = HashSet<Node>()
+                ball.getNodes().filterTo(tmp) { u.match(it) }
+            }
+            it.success()
+            return ret
+        }
     }
 }

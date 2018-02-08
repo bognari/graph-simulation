@@ -76,7 +76,9 @@ class MyNode(val group: Group, val variable: String = "") : MyEntity(), Node {
 
     fun addRelationship(relationship: MyRelationship) {
         if (relationships.contains(relationship)) {
-            throw IllegalArgumentException()
+            //throw IllegalArgumentException()
+            println("warning: loop at $this with $relationship")
+            return
         }
 
         relationships.add(relationship)

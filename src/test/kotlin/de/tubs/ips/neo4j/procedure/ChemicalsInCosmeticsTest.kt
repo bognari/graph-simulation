@@ -1,13 +1,11 @@
 package de.tubs.ips.neo4j.procedure
 
-import de.tubs.ips.neo4j.parser.Visitor
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.ClassRule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import org.neo4j.driver.internal.value.MapValue
 import org.neo4j.driver.v1.Config
 import org.neo4j.driver.v1.Driver
 import org.neo4j.driver.v1.GraphDatabase
@@ -105,7 +103,7 @@ r.chemicalId = row.ChemicalId;""")
         private lateinit var driver: Driver
     }
 
-    @Test
+    /*@Test
     fun test() {
         val visitor = Visitor.setupVisitor(query!!)
 
@@ -124,7 +122,7 @@ r.chemicalId = row.ChemicalId;""")
 
             println()
         })
-    }
+    } */
 
     @Test
     fun normal() {
@@ -159,5 +157,5 @@ r.chemicalId = row.ChemicalId;""")
         driver.session().use({ session ->
             val result = session.run("CALL myprocedure.strongSimulationLabel(\"$query\")").asSequence().toList()
         })
-    }
+    } 
 }

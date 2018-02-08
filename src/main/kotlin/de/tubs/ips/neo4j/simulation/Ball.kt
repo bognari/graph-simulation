@@ -1,11 +1,13 @@
 package de.tubs.ips.neo4j.simulation
 
+import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.Relationship
 import org.neo4j.graphdb.ResourceIterable
+import java.util.stream.Collectors
 
 
-class Ball(val center: Node, diameter: Int) : IDB {
+class Ball(val center: Node, diameter: Int, db:GraphDatabaseService) : IDB {
     override fun getNodes(): Iterable<Node> {
         return nodes
     }
@@ -21,8 +23,10 @@ class Ball(val center: Node, diameter: Int) : IDB {
         this.nodes = HashSet()
         this.relationships = ArrayList()
         nodes.add(center)
-
-        init(center, diameter)
+        db.beginTx().use {
+            init(center, diameter)
+            it.success()
+        }
     }
 
     private fun init(node: Node, diameter: Int) {
@@ -43,9 +47,11 @@ class Ball(val center: Node, diameter: Int) : IDB {
     }
 
     companion object {
-        fun createBalls(nodes: ResourceIterable<Node>, diameter: Int): Sequence<Ball> {
-            return nodes.asSequence()
-                    .map { Ball(it, diameter) }
+        fun createBalls(nodes: ResourceIterable<Node>, diameter: Int, db:GraphDatabaseService): List<Ball> {
+            return nodes
+                    .stream().parallel().map {
+                Ball(it, diameter, db)
+            }.collect(Collectors.toList())
         }
     }
 }
