@@ -53,7 +53,7 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
                 tmp[group] = pool.submit(Callable {
                     db.beginTx().use {
                         val sim = dualSim(ball, group, Mode.NORMAL)
-                        it.close()
+                        it.success()
                         return@Callable sim
                     }
                 })
@@ -153,6 +153,7 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
                     }
 
                     tmp
+                            .asSequence()
                             .mapNotNull { it.get() }
                             .forEach {
                                 for (entry in it) {
@@ -197,7 +198,7 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
 
     private fun dualSim(ball: IDB, group: Group, mode: Mode = Mode.NORMAL): Map<MyNode, Set<Node>> {
         val sim =
-                if (mode == Mode.SHARED) {
+                if (mode == Mode.SHARED && ball is Neo4JWrapper) {
                     lazySim[group]!!
                 } else {
                     val ret = HashMap<MyNode, MutableSet<Node>>()
@@ -288,7 +289,7 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
     private fun sim(u: MyNode, ball: IDB): MutableSet<Node> {
         return if (ball is Neo4JWrapper && u.hasLabels()) {
             val iterator = ball.getNodes(u.labels.first())
-            val ret = iterator.asSequence().filter { u.match(it) }.toHashSet()
+            val ret = iterator.asSequence().filterTo(HashSet(), { u.match(it) })
             iterator.close()
             ret
         } else {
