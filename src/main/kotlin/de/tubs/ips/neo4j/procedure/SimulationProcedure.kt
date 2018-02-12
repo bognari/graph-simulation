@@ -34,7 +34,7 @@ class SimulationProcedure {
     fun dualSimulationID(@Name("pattern") pattern: String, @Name("mode", defaultValue = "NORMAL") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
-        val result = Simulation(visitor, db!!).dualSimulation(Simulation.Mode.valueOf(mode))
+        val result = Simulation(visitor, db!!).dualSimulation(Simulation.Mode.valueOf(mode.toUpperCase()))
         val query = rewriteQueryID(result, visitor)
         return getResult(query)
     }
@@ -44,7 +44,7 @@ class SimulationProcedure {
     fun strongSimulationID(@Name("pattern") pattern: String, @Name("mode", defaultValue = "NORMAL") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
-        val result = Simulation(visitor, db!!).strongSimulation(Simulation.Mode.valueOf(mode))
+        val result = Simulation(visitor, db!!).strongSimulation(Simulation.Mode.valueOf(mode.toUpperCase()))
         val query = rewriteQueryID(result, visitor)
         return getResult(query)
     }
@@ -54,7 +54,7 @@ class SimulationProcedure {
     fun dualSimulationIDString(@Name("pattern") pattern: String, @Name("mode", defaultValue = "NORMAL") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
-        val result = Simulation(visitor, db!!).dualSimulation(Simulation.Mode.valueOf(mode))
+        val result = Simulation(visitor, db!!).dualSimulation(Simulation.Mode.valueOf(mode.toUpperCase()))
         val query = rewriteQueryID(result, visitor)
         return Stream.of(Output(mapOf(Pair("query", query))))
     }
@@ -64,7 +64,7 @@ class SimulationProcedure {
     fun strongSimulationIDString(@Name("pattern") pattern: String, @Name("mode", defaultValue = "NORMAL") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
-        val result = Simulation(visitor, db!!).strongSimulation(Simulation.Mode.valueOf(mode))
+        val result = Simulation(visitor, db!!).strongSimulation(Simulation.Mode.valueOf(mode.toUpperCase()))
         val query = rewriteQueryID(result, visitor)
         return Stream.of(Output(mapOf(Pair("query", query))))
     }
@@ -74,7 +74,7 @@ class SimulationProcedure {
     fun dualSimulationLabel(@Name("pattern") pattern: String, @Name("mode", defaultValue = "NORMAL") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
-        val result = Simulation(visitor, db!!).dualSimulation(Simulation.Mode.valueOf(mode))
+        val result = Simulation(visitor, db!!).dualSimulation(Simulation.Mode.valueOf(mode.toUpperCase()))
         val query = rewriteQueryLabel(result, visitor)
         writeLabels(result)
         val ret = getResult(query)
@@ -87,7 +87,7 @@ class SimulationProcedure {
     fun strongSimulationLabel(@Name("pattern") pattern: String, @Name("mode", defaultValue = "NORMAL") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
-        val result = Simulation(visitor, db!!).strongSimulation(Simulation.Mode.valueOf(mode))
+        val result = Simulation(visitor, db!!).strongSimulation(Simulation.Mode.valueOf(mode.toUpperCase()))
         val query = rewriteQueryLabel(result, visitor)
         writeLabels(result)
         val ret = getResult(query)
