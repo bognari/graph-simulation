@@ -69,7 +69,6 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
             }
         }
 
-
         return result
     }
 
@@ -83,17 +82,21 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
                 val balls = Ball.createBalls(db.allNodes, max).toList()
 
                 for (group in visitor.groups) {
-                    val s_ws = balls
-                            .mapNotNull { extractMaxPG(it, dualSim(it, group)) }
-                            .map { it.entries }
-
                     val r = HashMap<MyNode, MutableSet<Node>>()
 
                     for (v in group.nodes) {
                         r[v] = HashSet()
                     }
 
-                    s_ws.flatMap { it }.forEach { r[it.key]!!.addAll(it.value) }
+                    balls
+                            .asSequence()
+                            .mapNotNull { extractMaxPG(it, dualSim(it, group)) }
+                            .map { it.entries }
+                            .forEach {
+                                it.forEach {
+                                    r[it.key]!!.addAll(it.value)
+                                }
+                            }
 
                     result[group] = r
                 }
