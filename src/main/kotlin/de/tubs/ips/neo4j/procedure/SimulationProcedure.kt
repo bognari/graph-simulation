@@ -11,7 +11,7 @@ import org.neo4j.procedure.*
 import java.util.stream.Stream
 
 
-class MyProcedure {
+class SimulationProcedure {
     // This field declares that we need a GraphDatabaseService
     // as context when any procedure in this class is invoked
     @Context
@@ -24,13 +24,14 @@ class MyProcedure {
 
     private fun getResult(query: String): Stream<Output> {
         val ret = db!!.execute(query)
-        val retList = ret.asSequence().map { Output(it) }.toList()
+        val retList = ret.asSequence().mapTo(ArrayList(), { Output(it) })
+        //ret.close()
         return retList.stream()
     }
 
-    @Procedure(value = "myprocedure.dualSimulationID", mode = Mode.READ)
+    @Procedure(value = "simulation.dualID", mode = Mode.READ)
     @Description("")
-    fun dualSimulationID(@Name("pattern") pattern: String, @Name("mode") mode: String
+    fun dualSimulationID(@Name("pattern") pattern: String, @Name("mode", defaultValue = "NORMAL") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
         val result = Simulation(visitor, db!!).dualSimulation(Simulation.Mode.valueOf(mode))
@@ -38,9 +39,9 @@ class MyProcedure {
         return getResult(query)
     }
 
-    @Procedure(value = "myprocedure.strongSimulationID", mode = Mode.READ)
+    @Procedure(value = "simulation.strongID", mode = Mode.READ)
     @Description("")
-    fun strongSimulationID(@Name("pattern") pattern: String, @Name("mode") mode: String
+    fun strongSimulationID(@Name("pattern") pattern: String, @Name("mode", defaultValue = "NORMAL") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
         val result = Simulation(visitor, db!!).strongSimulation(Simulation.Mode.valueOf(mode))
@@ -48,9 +49,9 @@ class MyProcedure {
         return getResult(query)
     }
 
-    @Procedure(value = "myprocedure.dualSimulationIDString", mode = Mode.READ)
+    @Procedure(value = "simulation.dualIDString", mode = Mode.READ)
     @Description("")
-    fun dualSimulationIDString(@Name("pattern") pattern: String, @Name("mode") mode: String
+    fun dualSimulationIDString(@Name("pattern") pattern: String, @Name("mode", defaultValue = "NORMAL") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
         val result = Simulation(visitor, db!!).dualSimulation(Simulation.Mode.valueOf(mode))
@@ -58,9 +59,9 @@ class MyProcedure {
         return Stream.of(Output(mapOf(Pair("query", query))))
     }
 
-    @Procedure(value = "myprocedure.strongSimulationIDString", mode = Mode.READ)
+    @Procedure(value = "simulation.strongIDString", mode = Mode.READ)
     @Description("")
-    fun strongSimulationIDString(@Name("pattern") pattern: String, @Name("mode") mode: String
+    fun strongSimulationIDString(@Name("pattern") pattern: String, @Name("mode", defaultValue = "NORMAL") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
         val result = Simulation(visitor, db!!).strongSimulation(Simulation.Mode.valueOf(mode))
@@ -68,9 +69,9 @@ class MyProcedure {
         return Stream.of(Output(mapOf(Pair("query", query))))
     }
 
-    @Procedure(value = "myprocedure.dualSimulationLabel", mode = Mode.WRITE)
+    @Procedure(value = "simulation.dualLabel", mode = Mode.WRITE)
     @Description("")
-    fun dualSimulationLabel(@Name("pattern") pattern: String, @Name("mode") mode: String
+    fun dualSimulationLabel(@Name("pattern") pattern: String, @Name("mode", defaultValue = "NORMAL") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
         val result = Simulation(visitor, db!!).dualSimulation(Simulation.Mode.valueOf(mode))
@@ -81,9 +82,9 @@ class MyProcedure {
         return ret
     }
 
-    @Procedure(value = "myprocedure.strongSimulationLabel", mode = Mode.WRITE)
+    @Procedure(value = "simulation.strongLabel", mode = Mode.WRITE)
     @Description("")
-    fun strongSimulationLabel(@Name("pattern") pattern: String, @Name("mode") mode: String
+    fun strongSimulationLabel(@Name("pattern") pattern: String, @Name("mode", defaultValue = "NORMAL") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
         val result = Simulation(visitor, db!!).strongSimulation(Simulation.Mode.valueOf(mode))

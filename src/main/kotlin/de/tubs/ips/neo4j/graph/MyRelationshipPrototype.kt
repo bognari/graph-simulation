@@ -19,6 +19,6 @@ data class MyRelationshipPrototype(val parsingDirection: Direction, private val 
      * types is an OR filter
      */
     fun matchTypes(other : Relationship) : Boolean {
-        return types.isEmpty() || types.any { other.isType(it) }
+        return types.isEmpty() || types.contains(other.type)
     }
 }

@@ -7,9 +7,9 @@ import org.jgrapht.graph.SimpleGraph
 class Group {
 
     private val mode : String
-    val nodesDirectory: MutableMap<String, MyNode> = LinkedHashMap()
-    val nodes: MutableSet<MyNode> = LinkedHashSet()
-    val relationships: MutableSet<MyRelationship> = LinkedHashSet()
+    val nodesDirectory = LinkedHashMap<String, MyNode>()
+    val nodes = LinkedHashSet<MyNode>()
+    val relationships = LinkedHashSet<MyRelationship>()
     val number: Int
     val inGroup = HashSet<MyNode>()
 
@@ -31,19 +31,19 @@ class Group {
     constructor(other: Group, whereContext: CypherParser.WhereContext) {
         mode = "OPTIONAL"
 
-        for ((key, othernode) in other.nodesDirectory) {
-            val node = MyNode(this, othernode)
+        for ((key, otherNode) in other.nodesDirectory) {
+            val node = MyNode(this, otherNode)
             nodesDirectory[key] = node
             nodes.add(node)
         }
 
         for (relationship in other.relationships) {
-            val otherstart = relationship.startNode
-            val otherend = relationship.endNode
+            val otherStart = relationship.startNode
+            val otherEnd = relationship.endNode
 
-            val start = nodesDirectory.getOrDefault(otherstart.variable, MyNode(this, otherstart))
+            val start = nodesDirectory.getOrDefault(otherStart.variable, MyNode(this, otherStart))
             nodes.add(start)
-            val end = nodesDirectory.getOrDefault(otherend.variable, MyNode(this, otherend))
+            val end = nodesDirectory.getOrDefault(otherEnd.variable, MyNode(this, otherEnd))
             nodes.add(end)
 
             relationships.add(MyRelationship(relationship, start, end))

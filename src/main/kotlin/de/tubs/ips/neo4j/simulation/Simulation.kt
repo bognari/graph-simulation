@@ -18,7 +18,9 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
         NORMAL, SHARED, PARALLEL
     }
 
-    private val pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())
+    companion object {
+        private val pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())
+    }
 
     private val lazySim: Map<Group, MutableMap<MyNode, MutableSet<Node>>> by lazy {
         val ret = HashMap<Group, HashMap<MyNode, MutableSet<Node>>>()
@@ -288,7 +290,6 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
             ret
         } else {
             ball.getNodes().filterTo(HashSet()) { u.match(it) } // only iterator and inline function
-
         }
     }
 }

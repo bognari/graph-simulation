@@ -4,7 +4,7 @@ import de.tubs.ips.neo4j.grammar.CypherParser
 import de.tubs.ips.neo4j.parser.Visitor
 import org.neo4j.graphdb.*
 
-class MyNode(val group: Group, val variable: String = "") : MyEntity(), Node {
+class MyNode(private val group: Group, val variable: String = "") : MyEntity(), Node {
 
     private val labels = HashSet<Label>() // FIXME shared between groups but no sharing is even fine because it is a lesser filter
     private val relationships = HashSet<Relationship>() // FIXME jede relation darf nur einmal im Patternpfad vorkommen
@@ -37,7 +37,7 @@ class MyNode(val group: Group, val variable: String = "") : MyEntity(), Node {
     override fun getRelationships(vararg relationshipTypes: RelationshipType): Iterable<Relationship> {
         return relationships.filter { hasType(it, *relationshipTypes) }
     }
-
+    
     override fun getRelationships(direction: Direction, vararg relationshipTypes: RelationshipType): Iterable<Relationship> {
         return getByDirection(direction).filter { hasType(it, *relationshipTypes) }
     }
@@ -168,7 +168,7 @@ class MyNode(val group: Group, val variable: String = "") : MyEntity(), Node {
     }
 
     private fun matchLabels(other: Node): Boolean {
-        return labels.isEmpty() || labels.all { other.hasLabel(it) }
+        return labels.all { other.hasLabel(it) }
     }
 
     /**

@@ -4,7 +4,7 @@ import org.neo4j.graphdb.Entity
 import org.neo4j.graphdb.GraphDatabaseService
 
 abstract class MyEntity : Entity {
-    protected val properties: MutableMap<String, Any> = HashMap()
+    protected val properties = HashMap<String, Any>()
 
     override fun getId(): Long {
         throw UnsupportedOperationException()
@@ -50,13 +50,10 @@ abstract class MyEntity : Entity {
         return properties
     }
 
-    fun matchProperties(other : Entity) : Boolean {
-        for ((key, value) in properties) {
-            if (!other.hasProperty(key) || value != other.getProperty(key)) {
-                return false
-            }
+    fun matchProperties(other: Entity): Boolean {
+        return properties.all {
+            other.hasProperty(it.key)
+                    && other.getProperty(it.key) == it.value
         }
-
-        return true
     }
 }

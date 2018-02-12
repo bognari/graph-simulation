@@ -21,7 +21,7 @@ class MAMETest {
     companion object {
         @ClassRule
         @JvmField
-        var neo4j: Neo4jRule = Neo4jRule().withProcedure(MyProcedure::class.java)
+        var neo4j: Neo4jRule = Neo4jRule().withProcedure(SimulationProcedure::class.java)
 
         @Parameterized.Parameters(name = "<{index}> {0}")
         @JvmStatic
@@ -111,7 +111,7 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
     @Test
     fun dualSimulationID() {
         driver.session().use({ session ->
-            val result = session.run("CALL myprocedure.dualSimulationID(\"$query\", \"NORMAL\")").summary()
+            val result = session.run("CALL simulation.dualID(\"$query\", \"NORMAL\")").summary()
             print("dualSimulationID, ")
             print(result.profile()?.records())
             print(", ")
@@ -126,7 +126,7 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
     @Test
     fun strongSimulationID() {
         driver.session().use({ session ->
-            val result = session.run("CALL myprocedure.strongSimulationID(\"$query\", \"NORMAL\")").summary()
+            val result = session.run("CALL simulation.strongID(\"$query\", \"NORMAL\")").summary()
             print("strongSimulationID, ")
             print(result.profile()?.records())
             print(", ")
@@ -141,7 +141,7 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
     @Test
     fun dualSimulationLabel() {
         driver.session().use({ session ->
-            val result = session.run("CALL myprocedure.dualSimulationLabel(\"$query\", \"NORMAL\")").summary()
+            val result = session.run("CALL simulation.dualLabel(\"$query\", \"NORMAL\")").summary()
             print("dualSimulationLabel, ")
             print(result.profile()?.records())
             print(", ")
@@ -156,7 +156,7 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
     @Test
     fun strongSimulationLabel() {
         driver.session().use({ session ->
-            val result = session.run("CALL myprocedure.strongSimulationLabel(\"$query\", \"NORMAL\")").summary()
+            val result = session.run("CALL simulation.strongLabel(\"$query\", \"NORMAL\")").summary()
             print("strongSimulationLabel, ")
             print(result.profile()?.records())
             print(", ")
@@ -171,7 +171,7 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
     @Test
     fun dualSimulationIDP() {
         driver.session().use({ session ->
-            val result = session.run("CALL myprocedure.dualSimulationID(\"$query\", \"PARALLEL\")").summary()
+            val result = session.run("CALL simulation.dualID(\"$query\", \"PARALLEL\")").summary()
             print("dualSimulationIDP, ")
             print(result.profile()?.records())
             print(", ")
@@ -186,7 +186,7 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
     @Test
     fun strongSimulationIDP() {
         driver.session().use({ session ->
-            val result = session.run("CALL myprocedure.strongSimulationID(\"$query\", \"PARALLEL\")").summary()
+            val result = session.run("CALL simulation.strongID(\"$query\", \"PARALLEL\")").summary()
             print("strongSimulationIDP, ")
             print(result.profile()?.records())
             print(", ")
@@ -201,7 +201,7 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
     @Test
     fun dualSimulationLabelP() {
         driver.session().use({ session ->
-            val result = session.run("CALL myprocedure.dualSimulationLabel(\"$query\", \"PARALLEL\")").summary()
+            val result = session.run("CALL simulation.dualLabel(\"$query\", \"PARALLEL\")").summary()
             print("dualSimulationLabelP, ")
             print(result.profile()?.records())
             print(", ")
@@ -216,7 +216,7 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
     @Test
     fun strongSimulationLabelP() {
         driver.session().use({ session ->
-            val result = session.run("CALL myprocedure.strongSimulationLabel(\"$query\", \"PARALLEL\")").summary()
+            val result = session.run("CALL simulation.strongLabel(\"$query\", \"PARALLEL\")").summary()
             print("strongSimulationLabelP, ")
             print(result.profile()?.records())
             print(", ")
@@ -231,7 +231,7 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
     @Test
     fun dualSimulationIDS() {
         driver.session().use({ session ->
-            val result = session.run("CALL myprocedure.dualSimulationID(\"$query\", \"SHARED\")").summary()
+            val result = session.run("CALL simulation.dualID(\"$query\", \"SHARED\")").summary()
             print("dualSimulationIDS, ")
             print(result.profile()?.records())
             print(", ")
@@ -246,7 +246,7 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
     @Test
     fun strongSimulationIDS() {
         driver.session().use({ session ->
-            val result = session.run("CALL myprocedure.strongSimulationID(\"$query\", \"SHARED\")").summary()
+            val result = session.run("CALL simulation.strongID(\"$query\", \"SHARED\")").summary()
             print("strongSimulationIDS, ")
             print(result.profile()?.records())
             print(", ")
@@ -261,7 +261,7 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
     @Test
     fun dualSimulationLabelS() {
         driver.session().use({ session ->
-            val result = session.run("CALL myprocedure.dualSimulationLabel(\"$query\", \"SHARED\")").summary()
+            val result = session.run("CALL simulation.dualLabel(\"$query\", \"SHARED\")").summary()
             print("dualSimulationLabelS, ")
             print(result.profile()?.records())
             print(", ")
@@ -276,7 +276,7 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
     @Test
     fun strongSimulationLabelS() {
         driver.session().use({ session ->
-            val result = session.run("CALL myprocedure.strongSimulationLabel(\"$query\", \"SHARED\")").summary()
+            val result = session.run("CALL simulation.strongLabel(\"$query\", \"SHARED\")").summary()
             print("strongSimulationLabelS, ")
             print(result.profile()?.records())
             print(", ")

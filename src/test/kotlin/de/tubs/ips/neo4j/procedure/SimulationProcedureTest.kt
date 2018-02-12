@@ -8,11 +8,11 @@ import org.neo4j.driver.v1.GraphDatabase
 import org.neo4j.harness.junit.Neo4jRule
 
 
-class MyProcedureTest {
+class SimulationProcedureTest {
     // This rule starts a Neo4j instance
     @Rule
     @JvmField
-    var neo4j = Neo4jRule().withProcedure(MyProcedure::class.java)
+    var neo4j = Neo4jRule().withProcedure(SimulationProcedure::class.java)
 
     @Test
     @Throws(Throwable::class)
@@ -38,7 +38,7 @@ class MyProcedureTest {
                 println(session.run("Match (a:Character) RETURN count(a)").next())
                 */
                 // When
-                val result = session.run("""CALL myprocedure.dualSimulationID("
+                val result = session.run("""CALL simulation.dualID("
                     MATCH (x:FullProfessor)-[:worksFor]-({id: 'http://www.Department0.University12.edu'}) OPTIONAL MATCH (y)-[:advisor]-(x), (x)-[:teacherOf]-(x), (y)-[:takesCourse]-(z) RETURN x, y, z;
 
                         ", "NORMAL")""")
