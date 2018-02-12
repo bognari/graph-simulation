@@ -41,7 +41,7 @@ class MyProcedureTest {
                 val result = session.run("""CALL myprocedure.dualSimulationID("
                     MATCH (x:FullProfessor)-[:worksFor]-({id: 'http://www.Department0.University12.edu'}) OPTIONAL MATCH (y)-[:advisor]-(x), (x)-[:teacherOf]-(x), (y)-[:takesCourse]-(z) RETURN x, y, z;
 
-                        ")""")
+                        ", "NORMAL")""")
 
                 val rList = result.asSequence().toList()
 

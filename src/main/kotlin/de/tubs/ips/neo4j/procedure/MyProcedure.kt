@@ -30,50 +30,50 @@ class MyProcedure {
 
     @Procedure(value = "myprocedure.dualSimulationID", mode = Mode.READ)
     @Description("")
-    fun dualSimulationID(@Name("pattern") pattern: String
+    fun dualSimulationID(@Name("pattern") pattern: String, @Name("mode") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
-        val result = Simulation(visitor, db!!).dualSimulation()
+        val result = Simulation(visitor, db!!).dualSimulation(Simulation.Mode.valueOf(mode))
         val query = rewriteQueryID(result, visitor)
         return getResult(query)
     }
 
     @Procedure(value = "myprocedure.strongSimulationID", mode = Mode.READ)
     @Description("")
-    fun strongSimulationID(@Name("pattern") pattern: String
+    fun strongSimulationID(@Name("pattern") pattern: String, @Name("mode") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
-        val result = Simulation(visitor, db!!).strongSimulation()
+        val result = Simulation(visitor, db!!).strongSimulation(Simulation.Mode.valueOf(mode))
         val query = rewriteQueryID(result, visitor)
         return getResult(query)
     }
 
     @Procedure(value = "myprocedure.dualSimulationIDString", mode = Mode.READ)
     @Description("")
-    fun dualSimulationIDString(@Name("pattern") pattern: String
+    fun dualSimulationIDString(@Name("pattern") pattern: String, @Name("mode") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
-        val result = Simulation(visitor, db!!).dualSimulation()
+        val result = Simulation(visitor, db!!).dualSimulation(Simulation.Mode.valueOf(mode))
         val query = rewriteQueryID(result, visitor)
         return Stream.of(Output(mapOf(Pair("query", query))))
     }
 
     @Procedure(value = "myprocedure.strongSimulationIDString", mode = Mode.READ)
     @Description("")
-    fun strongSimulationIDString(@Name("pattern") pattern: String
+    fun strongSimulationIDString(@Name("pattern") pattern: String, @Name("mode") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
-        val result = Simulation(visitor, db!!).strongSimulation()
+        val result = Simulation(visitor, db!!).strongSimulation(Simulation.Mode.valueOf(mode))
         val query = rewriteQueryID(result, visitor)
         return Stream.of(Output(mapOf(Pair("query", query))))
     }
 
     @Procedure(value = "myprocedure.dualSimulationLabel", mode = Mode.WRITE)
     @Description("")
-    fun dualSimulationLabel(@Name("pattern") pattern: String
+    fun dualSimulationLabel(@Name("pattern") pattern: String, @Name("mode") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
-        val result = Simulation(visitor, db!!).dualSimulation()
+        val result = Simulation(visitor, db!!).dualSimulation(Simulation.Mode.valueOf(mode))
         val query = rewriteQueryLabel(result, visitor)
         writeLabels(result)
         val ret = getResult(query)
@@ -83,10 +83,10 @@ class MyProcedure {
 
     @Procedure(value = "myprocedure.strongSimulationLabel", mode = Mode.WRITE)
     @Description("")
-    fun strongSimulationLabel(@Name("pattern") pattern: String
+    fun strongSimulationLabel(@Name("pattern") pattern: String, @Name("mode") mode: String
     ): Stream<Output> {
         val visitor = getVisitor(pattern)
-        val result = Simulation(visitor, db!!).strongSimulation()
+        val result = Simulation(visitor, db!!).strongSimulation(Simulation.Mode.valueOf(mode))
         val query = rewriteQueryLabel(result, visitor)
         writeLabels(result)
         val ret = getResult(query)
@@ -95,30 +95,24 @@ class MyProcedure {
     }
 
     private fun writeLabels(result: Map<Group, Map<MyNode, Set<Node>>>) {
-        db!!.beginTx().use {
-            for ((group, map) in result) {
-                for ((node, list) in map) {
-                    val label = genLabelString(group, node)
-                    for (possibleNode in list) {
-                        possibleNode.addLabel(Label.label(label))
-                    }
+        for ((group, map) in result) {
+            for ((node, list) in map) {
+                val label = genLabelString(group, node)
+                for (possibleNode in list) {
+                    possibleNode.addLabel(Label.label(label))
                 }
             }
-            it.success()
         }
     }
 
     private fun removeLabels(result: Map<Group, Map<MyNode, Set<Node>>>) {
-        db!!.beginTx().use {
-            for ((group, map) in result) {
-                for ((node, list) in map) {
-                    val label = genLabelString(group, node)
-                    for (possibleNode in list) {
-                        possibleNode.removeLabel(Label.label(label))
-                    }
+        for ((group, map) in result) {
+            for ((node, list) in map) {
+                val label = genLabelString(group, node)
+                for (possibleNode in list) {
+                    possibleNode.removeLabel(Label.label(label))
                 }
             }
-            it.success()
         }
     }
 
