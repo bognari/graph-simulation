@@ -137,6 +137,10 @@ class MyNode(val group: Group, val variable: String = "") : MyEntity(), Node {
         return labels
     }
 
+    fun hasLabels(): Boolean {
+        return labels.any()
+    }
+
     private fun getByDirection(direction: Direction): Collection<Relationship> {
         return when (direction) {
             Direction.INCOMING -> relationshipsIncoming

@@ -154,7 +154,7 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
                                     r[entry.key]!!.addAll(entry.value)
                                 }
                             }
-                    
+
                     result[group] = r
                 }
             }
@@ -281,6 +281,14 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
     }
 
     private fun sim(u: MyNode, ball: IDB): MutableSet<Node> {
-        return ball.getNodes().filterTo(HashSet()) { u.match(it) } // only iterator and inline function
+        return if (ball is Neo4JWrapper && u.hasLabels()) {
+            val iterator = ball.getNodes(u.labels.first())
+            val ret = iterator.asSequence().filter { u.match(it) }.toHashSet()
+            iterator.close()
+            ret
+        } else {
+            ball.getNodes().filterTo(HashSet()) { u.match(it) } // only iterator and inline function
+
+        }
     }
 }
