@@ -65,24 +65,29 @@ enum class Func {
 }
 
 fun run(driver: Driver, func: Func, mode: Mode, query: String, i: Int, r: Int) {
-    driver.session().use({ session ->
-        val result = if (func != Func.normal) {
-            session.run("CALL simulation.$func(\"$query\", \"$mode\")")
-        } else {
-            session.run(query)
-        }
+    driver.session().use({
+        val time = System.currentTimeMillis()
+        
+        val result =
+                if (func != Func.normal) {
+                    it.run("CALL simulation.$func(\"$query\", \"$mode\")")
+                } else {
+                    it.run(query)
+                }
 
         val number = result.list().size
         val sum = result.consume()
         val ra = sum.resultAvailableAfter(TimeUnit.MILLISECONDS)
         val rc = sum.resultConsumedAfter(TimeUnit.MILLISECONDS)
-        print("$i, ")
-        print("$func, ")
-        print("$mode, ")
-        print("$ra, ")
-        print("$rc, ")
-        print("${ra + rc}, ")
-        println("$number")
+
+        print(", $i")
+        print(", $func")
+        print(", $mode")
+        print(", $ra")
+        print(", $rc")
+        print(", ${ra + rc}")
+        print(", ${System.currentTimeMillis() - time}")
+        println(", $number")
 
         Assert.assertEquals(r, number)
     })
