@@ -3,7 +3,9 @@ package de.tubs.ips.neo4j.procedure
 import org.junit.Assert
 import org.neo4j.driver.internal.value.NullValue
 import org.neo4j.driver.internal.value.StringValue
+import org.neo4j.driver.v1.Driver
 import org.neo4j.driver.v1.Record
+import java.util.concurrent.TimeUnit
 
 fun testResults(l1: List<Record>, l2: List<Map<String, Any?>>) {
     Assert.assertEquals(l1.size, l2.size)
@@ -53,3 +55,50 @@ fun testResultsUnordered(l1: List<Record>, l2: List<Map<String, Any?>>) {
         })
     }
 }
+
+enum class Mode {
+    NORMAL, SHARED, PARALLEL,
+}
+
+enum class Func {
+    dualID, dualLabel, strongID, strongLabel, normal
+}
+
+fun run(driver: Driver, func: Func, mode: Mode, query: String, i: Int, r: Int) {
+    driver.session().use({ session ->
+        val result = if (func != Func.normal) {
+            session.run("CALL simulation.$func(\"$query\", \"$mode\")")
+        } else {
+            session.run(query)
+        }
+
+        val number = result.list().size
+        val sum = result.consume()
+        val ra = sum.resultAvailableAfter(TimeUnit.MILLISECONDS)
+        val rc = sum.resultConsumedAfter(TimeUnit.MILLISECONDS)
+        print("$i, ")
+        print("$func, ")
+        print("$mode, ")
+        print("$ra, ")
+        print("$rc, ")
+        print("${ra + rc}, ")
+        println("$number")
+
+        Assert.assertEquals(r, number)
+    })
+}
+
+fun createTests(size: Int): Iterable<Array<Any>> {
+    val list = ArrayList<Array<Any>>()
+    for (i in 0 until size) {
+        for (f in Func.values()) {
+            Mode.values()
+                    .filterNot { f == Func.normal && it != Mode.NORMAL }
+                    .mapTo(list) { arrayOf(i, f, it) }
+        }
+    }
+
+    return list
+}
+
+

@@ -10,33 +10,26 @@ import org.neo4j.driver.v1.Config
 import org.neo4j.driver.v1.Driver
 import org.neo4j.driver.v1.GraphDatabase
 import org.neo4j.harness.junit.Neo4jRule
-import java.util.concurrent.TimeUnit
 
 @RunWith(Parameterized::class)
 class MAMETest {
-    @Parameterized.Parameter
-    @JvmField
-    var query: String? = null
-
     companion object {
         @ClassRule
         @JvmField
         var neo4j: Neo4jRule = Neo4jRule().withProcedure(SimulationProcedure::class.java)
 
-        @Parameterized.Parameters(name = "<{index}> {0}")
-        @JvmStatic
-        fun params(): Iterable<String> {
-            return listOf("MATCH (G:Game)\n" +
-                    "RETURN count(G)", "MATCH (C:Clone)\n" +
-                    "RETURN count(C)", "MATCH (C:Clone {name:'pacman'})-[:CLONEOF]-(G:Game)\n" +
-                    "MATCH (M:Manufacturer)-[:MANUFACTURED]-(G)\n" +
-                    "MATCH (Y:Year)-[:PRODUCED]-(G)\n" +
-                    "MATCH (S:Source)-[:DRIVER]-(G)\n" +
-                    "RETURN C,G,M,Y,S", "MATCH (C:Clone )-[:CLONEOF]-(G:Game {name:'puckman'} )\n" +
-                    "RETURN C,G", "MATCH (C:Clone)-[:CLONEOF]-(G:Game)\n" +
-                    "RETURN G.name , count(C) AS Clones ORDER BY Clones DESC", "MATCH (S:Source {name:'galaxian.cpp'})-[:DRIVER]-(G:Game)\n" +
-                    "RETURN G.description AS Name ORDER BY Name").map { it.replace("\n", " ") }.map { it.replace("\"", "'") }
-        }
+        val rs = intArrayOf(1, 1, 1, 29, 47, 45)
+
+        val qs = listOf("MATCH (G:Game)\n" +
+                "RETURN count(G)", "MATCH (C:Clone)\n" +
+                "RETURN count(C)", "MATCH (C:Clone {name:'pacman'})-[:CLONEOF]-(G:Game)\n" +
+                "MATCH (M:Manufacturer)-[:MANUFACTURED]-(G)\n" +
+                "MATCH (Y:Year)-[:PRODUCED]-(G)\n" +
+                "MATCH (S:Source)-[:DRIVER]-(G)\n" +
+                "RETURN C,G,M,Y,S", "MATCH (C:Clone )-[:CLONEOF]-(G:Game {name:'puckman'} )\n" +
+                "RETURN C,G", "MATCH (C:Clone)-[:CLONEOF]-(G:Game)\n" +
+                "RETURN G.name , count(C) AS Clones ORDER BY Clones DESC", "MATCH (S:Source {name:'galaxian.cpp'})-[:DRIVER]-(G:Game)\n" +
+                "RETURN G.description AS Name ORDER BY Name").map { it.replace("\n", " ") }.map { it.replace("\"", "'") }
 
         @BeforeClass
         @JvmStatic
@@ -74,13 +67,17 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
  MERGE (G)-[:STATUS]->(S)
  MERGE (So)-[:DRIVER]->(G)
 );""")
-
             driver.session().use({
                 for (i in import) {
                     it.run(i)
                 }
             })
+        }
 
+        @Parameterized.Parameters(name = "<{index}> {0} {1} {2}")
+        @JvmStatic
+        fun params(): Iterable<Array<Any>> {
+            return createTests(qs.size)
         }
 
         @AfterClass
@@ -93,198 +90,41 @@ FOREACH(ignoreMe IN CASE WHEN trim(line.cloneof) <> "" THEN [] ELSE [1] END |
         private lateinit var driver: Driver
     }
 
+    @Parameterized.Parameter(0)
+    @JvmField
+    var index: Int? = null
+
+    @Parameterized.Parameter(1)
+    @JvmField
+    var func: Func? = null
+
+    @Parameterized.Parameter(2)
+    @JvmField
+    var mode: Mode? = null
+
+    /*@Test
+    fun test() {
+        val visitor = Visitor.setupVisitor(query!!)
+
+        driver.session().use({ session ->
+            val q1 = "CALL simulation.dualID(\"$query\", \"NORMAL\")"
+            val q2 = "CALL simulation.strongID(\"$query\", \"NORMAL\")"
+            val q3 = "CALL simulation.dualLabel(\"$query\", \"NORMAL\")"
+            val q4 = "CALL simulation.strongLabel(\"$query\", \"NORMAL\")"
+
+            val result = session.run(query).asSequence().toList()
+            val r1 = session.run(q1).asSequence().map { it["content"] as MapValue }.map { it.asMap() }.toList()
+            val r2 = session.run(q2).asSequence().map { it["content"] as MapValue }.map { it.asMap() }.toList()
+
+            testResults(result, r1)
+            testResults(result, r2)
+
+            //println()
+        })
+    }*/
+
     @Test
     fun normal() {
-        driver.session().use({ session ->
-            val result = session.run(query).summary()
-            print("normal, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(", ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun dualSimulationID() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.dualID(\"$query\", \"NORMAL\")").summary()
-            print("dualSimulationID, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(", ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun strongSimulationID() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.strongID(\"$query\", \"NORMAL\")").summary()
-            print("strongSimulationID, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(", ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun dualSimulationLabel() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.dualLabel(\"$query\", \"NORMAL\")").summary()
-            print("dualSimulationLabel, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(", ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun strongSimulationLabel() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.strongLabel(\"$query\", \"NORMAL\")").summary()
-            print("strongSimulationLabel, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(", ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun dualSimulationIDP() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.dualID(\"$query\", \"PARALLEL\")").summary()
-            print("dualSimulationIDP, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun strongSimulationIDP() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.strongID(\"$query\", \"PARALLEL\")").summary()
-            print("strongSimulationIDP, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun dualSimulationLabelP() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.dualLabel(\"$query\", \"PARALLEL\")").summary()
-            print("dualSimulationLabelP, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun strongSimulationLabelP() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.strongLabel(\"$query\", \"PARALLEL\")").summary()
-            print("strongSimulationLabelP, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun dualSimulationIDS() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.dualID(\"$query\", \"SHARED\")").summary()
-            print("dualSimulationIDS, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun strongSimulationIDS() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.strongID(\"$query\", \"SHARED\")").summary()
-            print("strongSimulationIDS, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun dualSimulationLabelS() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.dualLabel(\"$query\", \"SHARED\")").summary()
-            print("dualSimulationLabelS, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun strongSimulationLabelS() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.strongLabel(\"$query\", \"SHARED\")").summary()
-            print("strongSimulationLabelS, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
+        de.tubs.ips.neo4j.procedure.run(driver, func!!, mode!!, qs[index!!], index!!, rs[index!!])
     }
 }

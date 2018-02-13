@@ -2,6 +2,7 @@ package de.tubs.ips.neo4j.simulation
 
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.ResourceIterable
+import java.util.*
 
 class Ball(val center: Node, diameter: Int) : IDB {
     private val nodes = HashSet<Node>()
@@ -15,18 +16,20 @@ class Ball(val center: Node, diameter: Int) : IDB {
         init(center, diameter)
     }
 
-    /**
-     * very slow...
-     */
     private fun init(node: Node, diameter: Int) {
-        if (diameter == 0) {
-            return
-        }
+        val queue: Queue<Pair<Node, Int>> = LinkedList()
+        queue.add(Pair(node, 0))
 
-        for (relationship in node.relationships) {
-            val next = relationship.getOtherNode(node)
-            nodes.add(next)
-            init(next, diameter - 1)
+        while (true) {
+            val p: Pair<Node, Int> = queue.poll() ?: return
+            val n = p.first
+            val d = p.second
+
+            p.first.relationships
+                    .asSequence()
+                    .map { it.getOtherNode(n) }
+                    .filter { nodes.add(it) && d + 1 < diameter }
+                    .mapTo(queue) { Pair(it, d + 1) }
         }
     }
 

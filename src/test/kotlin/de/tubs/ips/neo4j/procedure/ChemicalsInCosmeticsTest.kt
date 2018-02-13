@@ -10,28 +10,22 @@ import org.neo4j.driver.v1.Config
 import org.neo4j.driver.v1.Driver
 import org.neo4j.driver.v1.GraphDatabase
 import org.neo4j.harness.junit.Neo4jRule
-import java.util.concurrent.TimeUnit
 
 @RunWith(Parameterized::class)
 class ChemicalsInCosmeticsTest {
-    @Parameterized.Parameter
-    @JvmField
-    var query: String? = null
-
     companion object {
         @ClassRule
         @JvmField
         var neo4j: Neo4jRule = Neo4jRule().withProcedure(SimulationProcedure::class.java)
-        
-        @Parameterized.Parameters(name = "<{index}> {0}")
-        @JvmStatic
-        fun params(): Iterable<String> {
-            return listOf("MATCH (p:Product)<-[r:USED_IN]-(ch:Chemical) RETURN p, ch;","""MATCH (co:Company)-[:OWNS]->(b:Brand {name: "Revlon"}), (b)-[:PRODUCES]->(p:Product)-[:BELONGS_TO]->(s:Category)<-[:CONTAINS]-(c:Category), (ch:Chemical)-[:USED_IN]-(p)
+
+        val rs = intArrayOf(416, 1, 30, 30, 342, 1)
+
+        val qs = listOf("MATCH (p:Product)<-[r:USED_IN]-(ch:Chemical) RETURN p, ch;", """MATCH (co:Company)-[:OWNS]->(b:Brand {name: "Revlon"}), (b)-[:PRODUCES]->(p:Product)-[:BELONGS_TO]->(s:Category)<-[:CONTAINS]-(c:Category), (ch:Chemical)-[:USED_IN]-(p)
 RETURN co, b, p, s, c, ch LIMIT 1;""",
-                    """MATCH (b:Brand)-[:PRODUCES]->(p:Product)
+                """MATCH (b:Brand)-[:PRODUCES]->(p:Product)
 RETURN b.name AS Brand, count(p) AS numOfProducts
 ORDER BY numOfProducts DESC;""",
-                    """MATCH (b:Brand)-[:PRODUCES]->(p:Product)<-[r:USED_IN]-(ch:Chemical)
+                """MATCH (b:Brand)-[:PRODUCES]->(p:Product)<-[r:USED_IN]-(ch:Chemical)
 WHERE r.discontinuedDate IS NULL
 RETURN b AS brand, count(p) AS productCount
 ORDER BY productCount DESC;""", """MATCH (b:Brand)-[:PRODUCES]->(p:Product)
@@ -39,7 +33,6 @@ WHERE b.name = "Revlon"
 RETURN p.name, p.initialDateReported, p.mostRecentDateReported;""", """MATCH (b:Brand {name: "Revlon"})-[:PRODUCES]->(p:Product)<-[r:USED_IN]-(ch:Chemical)
 WHERE r.dateChemicalRemoved IS NULL
 RETURN b AS brand, count(p) AS productCount, ch.name AS chemical;""").map { it.replace("\n", " ") }.map { it.replace("\"", "'") }
-        }
 
         @BeforeClass
         @JvmStatic
@@ -48,18 +41,18 @@ RETURN b AS brand, count(p) AS productCount, ch.name AS chemical;""").map { it.r
 
 
             val import = listOf("CREATE INDEX ON :Product(cdphId);",
-            "CREATE INDEX ON :Product(csfId);",
-            "CREATE INDEX ON :Product(csf);",
-            "CREATE INDEX ON :Chemical(casId);",
-            "CREATE INDEX ON :Chemical(name);",
-            "CREATE INDEX ON :Category(name);",
+                    "CREATE INDEX ON :Product(csfId);",
+                    "CREATE INDEX ON :Product(csf);",
+                    "CREATE INDEX ON :Chemical(casId);",
+                    "CREATE INDEX ON :Chemical(name);",
+                    "CREATE INDEX ON :Category(name);",
 
-            "CREATE CONSTRAINT ON (c:Company) ASSERT c.name IS UNIQUE;",
-            "CREATE CONSTRAINT ON (c:Company) ASSERT c.id IS UNIQUE;",
-            "CREATE CONSTRAINT ON (b:Brand) ASSERT b.name IS UNIQUE;",
-            "CREATE CONSTRAINT ON (p:Product) ASSERT p.name IS UNIQUE;",
-            "CREATE CONSTRAINT ON (ch:Chemical) ASSERT ch.casNumber IS UNIQUE;",
-            "CREATE CONSTRAINT ON (c:Category) ASSERT c.id IS UNIQUE;",
+                    "CREATE CONSTRAINT ON (c:Company) ASSERT c.name IS UNIQUE;",
+                    "CREATE CONSTRAINT ON (c:Company) ASSERT c.id IS UNIQUE;",
+                    "CREATE CONSTRAINT ON (b:Brand) ASSERT b.name IS UNIQUE;",
+                    "CREATE CONSTRAINT ON (p:Product) ASSERT p.name IS UNIQUE;",
+                    "CREATE CONSTRAINT ON (ch:Chemical) ASSERT ch.casNumber IS UNIQUE;",
+                    "CREATE CONSTRAINT ON (c:Category) ASSERT c.id IS UNIQUE;",
                     """//Import ChemicalsInCosmetics Data Indexes
 USING PERIODIC COMMIT 1000
 LOAD CSV WITH HEADERS FROM "https://gist.graphgrid.com/data/Chemicals_in_Cosmetics.csv" AS row
@@ -91,7 +84,12 @@ r.chemicalId = row.ChemicalId;""")
                     it.run(i)
                 }
             })
+        }
 
+        @Parameterized.Parameters(name = "<{index}> {0} {1} {2}")
+        @JvmStatic
+        fun params(): Iterable<Array<Any>> {
+            return createTests(qs.size)
         }
 
         @AfterClass
@@ -104,199 +102,41 @@ r.chemicalId = row.ChemicalId;""")
         private lateinit var driver: Driver
     }
 
+    @Parameterized.Parameter(0)
+    @JvmField
+    var index: Int? = null
+
+    @Parameterized.Parameter(1)
+    @JvmField
+    var func: Func? = null
+
+    @Parameterized.Parameter(2)
+    @JvmField
+    var mode: Mode? = null
+
+    /*@Test
+    fun test() {
+        val visitor = Visitor.setupVisitor(query!!)
+
+        driver.session().use({ session ->
+            val q1 = "CALL simulation.dualID(\"$query\", \"NORMAL\")"
+            val q2 = "CALL simulation.strongID(\"$query\", \"NORMAL\")"
+            val q3 = "CALL simulation.dualLabel(\"$query\", \"NORMAL\")"
+            val q4 = "CALL simulation.strongLabel(\"$query\", \"NORMAL\")"
+
+            val result = session.run(query).asSequence().toList()
+            val r1 = session.run(q1).asSequence().map { it["content"] as MapValue }.map { it.asMap() }.toList()
+            val r2 = session.run(q2).asSequence().map { it["content"] as MapValue }.map { it.asMap() }.toList()
+
+            testResults(result, r1)
+            testResults(result, r2)
+
+            //println()
+        })
+    }*/
 
     @Test
     fun normal() {
-        driver.session().use({ session ->
-            val result = session.run(query).summary()
-            print("normal, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(", ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun dualSimulationID() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.dualID(\"$query\", \"NORMAL\")").summary()
-            print("dualSimulationID, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(", ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun strongSimulationID() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.strongID(\"$query\", \"NORMAL\")").summary()
-            print("strongSimulationID, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(", ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun dualSimulationLabel() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.dualLabel(\"$query\", \"NORMAL\")").summary()
-            print("dualSimulationLabel, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(", ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun strongSimulationLabel() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.strongLabel(\"$query\", \"NORMAL\")").summary()
-            print("strongSimulationLabel, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(", ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun dualSimulationIDP() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.dualID(\"$query\", \"PARALLEL\")").summary()
-            print("dualSimulationIDP, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun strongSimulationIDP() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.strongID(\"$query\", \"PARALLEL\")").summary()
-            print("strongSimulationIDP, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun dualSimulationLabelP() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.dualLabel(\"$query\", \"PARALLEL\")").summary()
-            print("dualSimulationLabelP, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun strongSimulationLabelP() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.strongLabel(\"$query\", \"PARALLEL\")").summary()
-            print("strongSimulationLabelP, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun dualSimulationIDS() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.dualID(\"$query\", \"SHARED\")").summary()
-            print("dualSimulationIDS, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun strongSimulationIDS() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.strongID(\"$query\", \"SHARED\")").summary()
-            print("strongSimulationIDS, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun dualSimulationLabelS() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.dualLabel(\"$query\", \"SHARED\")").summary()
-            print("dualSimulationLabelS, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
-    }
-
-    @Test
-    fun strongSimulationLabelS() {
-        driver.session().use({ session ->
-            val result = session.run("CALL simulation.strongLabel(\"$query\", \"SHARED\")").summary()
-            print("strongSimulationLabelS, ")
-            print(result.profile()?.records())
-            print(", ")
-            print(result.profile()?.dbHits())
-            print(", ")
-            print(result.resultAvailableAfter(TimeUnit.MILLISECONDS))
-            print(" ")
-            println(result.resultConsumedAfter(TimeUnit.MILLISECONDS))
-        })
+        de.tubs.ips.neo4j.procedure.run(driver, func!!, mode!!, qs[index!!], index!!, rs[index!!])
     }
 }
