@@ -80,7 +80,7 @@ fun run(driver: Driver, func: Func, mode: Mode, query: String, i: Int, r: Int) {
         val ra = sum.resultAvailableAfter(TimeUnit.MILLISECONDS)
         val rc = sum.resultConsumedAfter(TimeUnit.MILLISECONDS)
 
-        print(", $i")
+        print("$i")
         print(", $func")
         print(", $mode")
         print(", $ra")

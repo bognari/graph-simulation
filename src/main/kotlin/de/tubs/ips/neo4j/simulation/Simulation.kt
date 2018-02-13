@@ -20,15 +20,24 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
 
     companion object {
         private val pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())
+
+        /**
+         * The maximum size of array to allocate.
+         * Some VMs reserve some header words in an array.
+         * Attempts to allocate larger arrays may result in
+         * OutOfMemoryError: Requested array size exceeds VM limit
+         */
+        private val MAX_ARRAY_SIZE = 1 shl 10 //Integer.MAX_VALUE - 8
+        private val MAX_HS_SIZE = 1 shl 10    //1 shl 30
     }
 
     private val lazySim: Map<Group, MutableMap<MyNode, MutableSet<Node>>> by lazy {
-        val ret = HashMap<Group, HashMap<MyNode, MutableSet<Node>>>()
+        val ret = HashMap<Group, HashMap<MyNode, MutableSet<Node>>>(visitor.groups.size)
 
         for (g in visitor.groups) {
-            ret[g] = HashMap()
+            ret[g] = HashMap(g.nodes.size)
             for (n in g.nodes) {
-                ret[g]!![n] = HashSet()
+                ret[g]!![n] = HashSet(MAX_HS_SIZE)
             }
         }
 
@@ -45,10 +54,10 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
 
     fun dualSimulation(mode: Mode = Mode.NORMAL): Map<Group, Map<MyNode, Set<Node>>> {
         val ball = Neo4JWrapper(db)
-        val result = HashMap<Group, Map<MyNode, Set<Node>>>()
+        val result = HashMap<Group, Map<MyNode, Set<Node>>>(visitor.groups.size)
 
         if (mode == Mode.PARALLEL && visitor.groups.size > 1) {
-            val tmp = HashMap<Group, Future<Map<MyNode, Set<Node>>>>()
+            val tmp = HashMap<Group, Future<Map<MyNode, Set<Node>>>>(visitor.groups.size)
             for (group in visitor.groups) {
                 tmp[group] = pool.submit(Callable {
                     db.beginTx().use {
@@ -58,7 +67,6 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
                     }
                 })
             }
-
 
             for (entry in tmp) {
                 result[entry.key] = entry.value.get()
@@ -73,19 +81,19 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
     }
 
     fun strongSimulation(mode: Mode = Mode.NORMAL): Map<Group, Map<MyNode, Set<Node>>> {
-        val result = HashMap<Group, Map<MyNode, Set<Node>>>()
+        val result = HashMap<Group, Map<MyNode, Set<Node>>>(visitor.groups.size)
 
         when (mode) {
             Mode.SHARED -> {
                 // valid optimization because ball creation is extremely expensive
-                val max = visitor.groups.maxBy { it.diameter }!!.diameter
-                val balls = Ball.createBalls(db.allNodes, max).toList()
+                val max = visitor.groups.asSequence().map { it.diameter }.max()!!
+                val balls = Ball.createBalls(db.allNodes, max).toCollection(ArrayList(MAX_ARRAY_SIZE))
 
                 for (group in visitor.groups) {
-                    val r = HashMap<MyNode, MutableSet<Node>>()
+                    val r = HashMap<MyNode, MutableSet<Node>>(group.nodes.size)
 
                     for (v in group.nodes) {
-                        r[v] = HashSet()
+                        r[v] = HashSet(MAX_HS_SIZE)
                     }
 
                     balls
@@ -132,13 +140,13 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
                 } */
 
                 for (group in visitor.groups) {
-                    val r = HashMap<MyNode, MutableSet<Node>>()
+                    val r = HashMap<MyNode, MutableSet<Node>>(group.nodes.size)
 
                     for (v in group.nodes) {
-                        r[v] = HashSet()
+                        r[v] = HashSet(MAX_HS_SIZE)
                     }
 
-                    val tmp = ArrayList<Future<Map<MyNode, Set<Node>>?>>()
+                    val tmp = ArrayList<Future<Map<MyNode, Set<Node>>?>>(MAX_ARRAY_SIZE)
 
 
                     db.allNodes.mapTo(tmp) { n ->
@@ -166,10 +174,10 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
             }
             else -> {
                 for (group in visitor.groups) {
-                    val r = HashMap<MyNode, MutableSet<Node>>()
+                    val r = HashMap<MyNode, MutableSet<Node>>(group.nodes.size)
 
                     for (v in group.nodes) {
-                        r[v] = HashSet()
+                        r[v] = HashSet(MAX_HS_SIZE)
                     }
 
                     Ball.createBalls(db.allNodes, group.diameter)
@@ -180,7 +188,6 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
                                     r[it.key]!!.addAll(it.value)
                                 }
                             }
-
 
                     result[group] = r
                 }
@@ -201,7 +208,7 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
                 if (mode == Mode.SHARED && ball is Neo4JWrapper) {
                     lazySim[group]!!
                 } else {
-                    val ret = HashMap<MyNode, MutableSet<Node>>()
+                    val ret = HashMap<MyNode, MutableSet<Node>>(group.nodes.size)
 
                     // for each u \in V_q in Q do
                     for (u in group.nodes) {
@@ -289,11 +296,11 @@ class Simulation(private val visitor: Visitor, private val db: GraphDatabaseServ
     private fun sim(u: MyNode, ball: IDB): MutableSet<Node> {
         return if (ball is Neo4JWrapper && u.hasLabels()) {
             val iterator = ball.getNodes(u.labels.first())
-            val ret = iterator.asSequence().filterTo(HashSet(), { u.match(it) })
+            val ret = iterator.asSequence().filterTo(HashSet(MAX_HS_SIZE), { u.match(it) })
             iterator.close()
             ret
         } else {
-            ball.getNodes().filterTo(HashSet()) { u.match(it) } // only iterator and inline function
+            ball.getNodes().filterTo(HashSet(MAX_HS_SIZE)) { u.match(it) } // only iterator and inline function
         }
     }
 }
